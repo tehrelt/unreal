@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/tehrelt/unreal/internal/lib/jwt"
@@ -15,12 +16,25 @@ type Config struct {
 	Env  string `env:"ENV" env-default:"local"`
 	Port int    `env:"PORT" env-required:"true" env-default:"4200"`
 
-	cert struct {
+	App struct {
+		Name    string `env:"APP_NAME" env-required:"true" env-default:"unreal"`
+		Version string `env:"APP_VERSION" env-required:"true" env-default:"0.0.1"`
+	}
+
+	Cert struct {
 		PrivateKeyFile string `env:"CERT_PRIVATE_KEY_FILE" env-required:"true" env-default:"./cert/id_rsa"`
 		PublicKeyFile  string `env:"CERT_PUBLIC_KEY_FILE" env-required:"true" env-default:"./cert/id_rsa.pub"`
 	}
 
-	JwtCert *jwt.JWT
+	AES struct {
+		Secret string `env:"AES_SECRET"`
+	}
+
+	Jwt struct {
+		RSA       *jwt.JWT
+		Ttl       time.Duration
+		TtlString string `env:"JWT_TTL" env-required:"true" env-default:"10m"`
+	}
 }
 
 func New() *Config {
@@ -37,25 +51,40 @@ func New() *Config {
 	config.setupLogger()
 	if err := config.setupJwt(); err != nil {
 		slog.Error("error when reading jwt certificates", sl.Err(err))
+		panic(err)
 	}
+	if err := config.parseTtl(); err != nil {
+		slog.Error("error when parsing jwt ttl", sl.Err(err))
+		panic(err)
+	}
+
 	slog.Info("config setup", slog.Any("c", config))
 
 	return config
 }
 
+func (c *Config) parseTtl() error {
+	var err error
+	c.Jwt.Ttl, err = time.ParseDuration(c.Jwt.TtlString)
+	if err != nil {
+		return fmt.Errorf("unable to parse duration %s: %w", c.Jwt.TtlString, err)
+	}
+	return nil
+}
+
 func (c *Config) setupJwt() error {
 
-	private, err := os.ReadFile(c.cert.PrivateKeyFile)
+	private, err := os.ReadFile(c.Cert.PrivateKeyFile)
 	if err != nil {
-		return fmt.Errorf("unable to read file %s: %w", c.cert.PrivateKeyFile, err)
+		return fmt.Errorf("unable to read file %s: %w", c.Cert.PrivateKeyFile, err)
 	}
 
-	public, err := os.ReadFile(c.cert.PublicKeyFile)
+	public, err := os.ReadFile(c.Cert.PublicKeyFile)
 	if err != nil {
-		return fmt.Errorf("unable to read file %s: %w", c.cert.PublicKeyFile, err)
+		return fmt.Errorf("unable to read file %s: %w", c.Cert.PublicKeyFile, err)
 	}
 
-	c.JwtCert = jwt.NewJWT(private, public)
+	c.Jwt.RSA = jwt.NewJWT(private, public)
 
 	return nil
 }

@@ -8,7 +8,13 @@ require (
 )
 
 require (
+	github.com/emersion/go-imap/v2 v2.0.0-beta.3 // indirect
+	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43 // indirect
+)
+
+require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
+	github.com/emersion/go-imap v1.2.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/wire v0.6.0
 	github.com/joho/godotenv v1.5.1 // indirect

@@ -1,6 +1,6 @@
-package entity
+package dto
 
-type Claims struct {
+type LoginDto struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Host     string `json:"host"`

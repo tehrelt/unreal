@@ -1,13 +1,13 @@
 package jwt
 
 type JWT struct {
-	privateKey []byte
-	publicKey  []byte
+	Private []byte
+	Public  []byte
 }
 
 func NewJWT(privateKey, publicKey []byte) *JWT {
 	return &JWT{
-		privateKey: privateKey,
-		publicKey:  publicKey,
+		Private: privateKey,
+		Public:  publicKey,
 	}
 }

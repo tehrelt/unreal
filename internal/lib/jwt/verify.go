@@ -9,7 +9,7 @@ import (
 
 func (j *JWT) Verify(tokenString string, secret string) (*entity.Claims, error) {
 
-	key, err := jwt.ParseRSAPublicKeyFromPEM(j.publicKey)
+	key, err := jwt.ParseRSAPublicKeyFromPEM(j.Public)
 	if err != nil {
 		return nil, fmt.Errorf("unable parse public key: %w", err)
 	}

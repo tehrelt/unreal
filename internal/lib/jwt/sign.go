@@ -7,7 +7,7 @@ import (
 	"github.com/tehrelt/unreal/internal/entity"
 )
 
-func (j *JWT) Sign(claim *entity.Claims, ttl time.Duration, secret []byte) (string, error) {
+func (j *JWT) Sign(claim *entity.Claims, ttl time.Duration) (string, error) {
 	payload := claims{
 		Claims: *claim,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -16,7 +16,7 @@ func (j *JWT) Sign(claim *entity.Claims, ttl time.Duration, secret []byte) (stri
 		},
 	}
 
-	key, err := jwt.ParseRSAPrivateKeyFromPEM(j.privateKey)
+	key, err := jwt.ParseRSAPrivateKeyFromPEM(j.Private)
 	if err != nil {
 		return "", err
 	}
