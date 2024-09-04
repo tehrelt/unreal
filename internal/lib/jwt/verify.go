@@ -7,14 +7,14 @@ import (
 	"github.com/tehrelt/unreal/internal/entity"
 )
 
-func (j *JWT) Verify(tokenString string, secret string) (*entity.Claims, error) {
+func (j *JWT) Verify(tokenString string) (*entity.Claims, error) {
 
 	key, err := jwt.ParseRSAPublicKeyFromPEM(j.Public)
 	if err != nil {
 		return nil, fmt.Errorf("unable parse public key: %w", err)
 	}
 
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}

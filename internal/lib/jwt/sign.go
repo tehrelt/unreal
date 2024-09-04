@@ -21,7 +21,7 @@ func (j *JWT) Sign(claim *entity.Claims, ttl time.Duration) (string, error) {
 		return "", err
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodPS256.SigningMethodRSA, payload)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, payload)
 
 	signed, err := token.SignedString(key)
 	if err != nil {

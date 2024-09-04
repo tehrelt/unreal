@@ -2,14 +2,13 @@ package authservice
 
 import (
 	"context"
-	"crypto/aes"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/dto"
 	"github.com/tehrelt/unreal/internal/entity"
+	"github.com/tehrelt/unreal/internal/lib/aes"
 	"github.com/tehrelt/unreal/internal/lib/imap"
 )
 
@@ -19,6 +18,27 @@ type AuthService struct {
 
 func New(cfg *config.Config) *AuthService {
 	return &AuthService{cfg: cfg}
+}
+
+func (s *AuthService) Authenticate(ctx context.Context, token string) (*entity.Claims, error) {
+
+	claims, err := s.cfg.Jwt.RSA.Verify(token)
+	if err != nil {
+		return nil, fmt.Errorf("unable to verify token: %w", err)
+	}
+
+	slog.Debug("successful verify token", slog.Any("claims", claims))
+
+	pass, err := aes.Decrypt(s.cfg.AES.Secret, claims.Password)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decrypt password: %w", err)
+	}
+
+	claims.Password = string(pass)
+
+	slog.Debug("authorized", slog.Any("claims", claims))
+
+	return claims, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, d *dto.LoginDto) (string, error) {
@@ -31,20 +51,15 @@ func (s *AuthService) Login(ctx context.Context, d *dto.LoginDto) (string, error
 
 	slog.Debug("dial successfull")
 
-	ciph, err := aes.NewCipher([]byte(s.cfg.AES.Secret))
+	pass, err := aes.Encrypt(s.cfg.AES.Secret, d.Password)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to encrypt password: %w", err)
 	}
-
-	slog.Debug("ciphering aes")
-	buf := make([]byte, len(d.Password))
-	ciph.Encrypt(buf, []byte(d.Password))
-	encpass := hex.EncodeToString(buf)
 
 	claims := &entity.Claims{
 		Email:    d.Email,
 		Host:     d.Host,
-		Password: encpass,
+		Password: pass,
 		Port:     d.Port,
 	}
 
