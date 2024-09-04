@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/emersion/go-imap"
-	"github.com/samber/lo"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/entity"
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
@@ -36,31 +35,40 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 	}
 	defer cleanup()
 
-	mbx := make([]*imap.MailboxInfo, 0, 10)
-
+	mbx := make([]*entity.Mailbox, 0, 10)
 	mailboxes := make(chan *imap.MailboxInfo, 10)
-
 	done := make(chan error, 1)
-
 	go func() {
 		done <- c.List("", "*", mailboxes)
 	}()
 
 	for m := range mailboxes {
 		slog.Debug("mailbox", slog.Any("mailbox", m))
-		mbx = append(mbx, m)
+
+		_, err := c.Select(m.Name, false)
+		if err != nil {
+			return nil, fmt.Errorf("failed to select mailbox %q: %v", m.Name, err)
+		}
+
+		criteria := imap.NewSearchCriteria()
+		criteria.WithoutFlags = []string{"\\Seen"}
+		ids, err := c.Search(criteria)
+		if err != nil {
+			return nil, fmt.Errorf("failed to search mailbox %q: %v", m.Name, err)
+		}
+
+		mb := &entity.Mailbox{
+			Name:        m.Name,
+			Attributes:  m.Attributes,
+			UnreadCount: len(ids),
+		}
+
+		mbx = append(mbx, mb)
 	}
 
 	if err := <-done; err != nil {
 		return nil, fmt.Errorf("failed to list mailboxes: %v", err)
 	}
 
-	// slog.Debug("mailboxes", slog.Any("mailboxes", mbx))
-
-	return lo.Map(mbx, func(m *imap.MailboxInfo, _ int) *entity.Mailbox {
-		return &entity.Mailbox{
-			Name:       m.Name,
-			Attributes: m.Attributes,
-		}
-	}), nil
+	return mbx, nil
 }
