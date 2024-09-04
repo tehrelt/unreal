@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/emersion/go-imap"
+	"github.com/samber/lo"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/entity"
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
@@ -19,7 +20,7 @@ func New(cfg *config.Config) *MailService {
 	return &MailService{cfg: cfg}
 }
 
-func (s *MailService) Mailboxes(ctx context.Context) ([]*imap.MailboxInfo, error) {
+func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) {
 
 	log := slog.With(slog.String("Method", "Mailboxes"))
 
@@ -54,7 +55,11 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*imap.MailboxInfo, error
 		return nil, fmt.Errorf("failed to list mailboxes: %v", err)
 	}
 
-	slog.Debug("mailboxes", slog.Any("mailboxes", mbx))
+	// slog.Debug("mailboxes", slog.Any("mailboxes", mbx))
 
-	return mbx, nil
+	return lo.Map(mbx, func(m *imap.MailboxInfo, _ int) *entity.Mailbox {
+		return &entity.Mailbox{
+			Name: m.Name,
+		}
+	}), nil
 }
