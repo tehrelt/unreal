@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/emersion/go-imap"
 	"github.com/tehrelt/unreal/internal/config"
@@ -98,9 +99,10 @@ func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.M
 	seqSet := new(imap.SeqSet)
 	seqSet.AddRange(1, mbox.Messages)
 
-	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchRFC822}
+	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags}
 
-	mm := make([]*entity.Message, 0, 10)
+	mm := make([]*entity.Message, 0, mbox.Messages)
+
 	messages := make(chan *imap.Message, 10)
 	done := make(chan error, 1)
 
@@ -112,14 +114,32 @@ func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.M
 		log.Debug("message", slog.Any("message", m))
 
 		msg := new(entity.Message)
+
+		msg.IsRead = false
+		for _, flag := range m.Flags {
+			if flag == imap.SeenFlag {
+				msg.IsRead = true
+				break
+			}
+		}
+
 		if m.Envelope != nil {
 			msg.Id = m.Envelope.MessageId
 			msg.Subject = m.Envelope.Subject
-			msg.From = m.Envelope.From[0].Address()
+			from := m.Envelope.From[0]
+			msg.From = entity.From{
+				Name:    from.PersonalName,
+				Address: from.Address(),
+			}
+			msg.SentDate = m.Envelope.Date.String()
 		}
+
+		slog.Debug("fetched message", slog.Any("message", msg))
 
 		mm = append(mm, msg)
 	}
+
+	slices.Reverse(mm)
 
 	if err := <-done; err != nil {
 		return nil, fmt.Errorf("failed to fetch messages: %v", err)
