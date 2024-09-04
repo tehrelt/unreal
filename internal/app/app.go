@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
+	emw "github.com/labstack/echo/v4/middleware"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/handlers"
-	"github.com/tehrelt/unreal/internal/middleware"
+	mw "github.com/tehrelt/unreal/internal/middleware"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
@@ -30,7 +31,13 @@ func newApp(cfg *config.Config, as *authservice.AuthService, ms *mailservice.Mai
 
 func (a *App) initRoutes() {
 
-	reqauth := middleware.RequireAuth(a.as, a.config)
+	a.app.Use(emw.Logger())
+	a.app.Use(emw.CORSWithConfig(emw.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
+	}))
+
+	reqauth := mw.RequireAuth(a.as, a.config)
 
 	a.app.POST("/login", handlers.LoginHandler(a.as))
 	a.app.GET("/me", handlers.Profile(), reqauth)
