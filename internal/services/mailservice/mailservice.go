@@ -72,3 +72,58 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 
 	return mbx, nil
 }
+
+func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.Message, error) {
+	log := slog.With(slog.String("Method", "Messages"))
+
+	u, ok := ctx.Value("user").(*entity.Claims)
+	if !ok {
+		return nil, fmt.Errorf("no user in context")
+	}
+
+	log.Debug("dialing imap", slog.Any("user", u))
+	c, cleanup, err := imaps.Dial(u.Email, u.Password, u.Host, u.Port)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect: %v", err)
+	}
+	defer cleanup()
+
+	mbox, err := c.Select(mailbox, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to select mailbox %q: %v", mailbox, err)
+	}
+
+	log.Debug("mailbox", slog.Any("mailbox", mbox))
+
+	seqSet := new(imap.SeqSet)
+	seqSet.AddRange(1, mbox.Messages)
+
+	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchRFC822}
+
+	mm := make([]*entity.Message, 0, 10)
+	messages := make(chan *imap.Message, 10)
+	done := make(chan error, 1)
+
+	go func() {
+		done <- c.Fetch(seqSet, items, messages)
+	}()
+
+	for m := range messages {
+		log.Debug("message", slog.Any("message", m))
+
+		msg := new(entity.Message)
+		if m.Envelope != nil {
+			msg.Id = m.Envelope.MessageId
+			msg.Subject = m.Envelope.Subject
+			msg.From = m.Envelope.From[0].Address()
+		}
+
+		mm = append(mm, msg)
+	}
+
+	if err := <-done; err != nil {
+		return nil, fmt.Errorf("failed to fetch messages: %v", err)
+	}
+
+	return mm, nil
+}
