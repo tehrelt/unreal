@@ -59,7 +59,8 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 
 	return lo.Map(mbx, func(m *imap.MailboxInfo, _ int) *entity.Mailbox {
 		return &entity.Mailbox{
-			Name: m.Name,
+			Name:       m.Name,
+			Attributes: m.Attributes,
 		}
 	}), nil
 }

@@ -26,6 +26,8 @@ func Mailboxes(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
+		slog.Debug("got mailboxes", slog.Any("mailboxes", mailboxes))
+
 		return c.JSON(200, map[string]any{
 			"mailboxes": mailboxes,
 		})
