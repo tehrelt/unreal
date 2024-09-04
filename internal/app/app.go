@@ -29,8 +29,12 @@ func newApp(cfg *config.Config, as *authservice.AuthService, ms *mailservice.Mai
 }
 
 func (a *App) initRoutes() {
+
+	reqauth := middleware.RequireAuth(a.as, a.config)
+
 	a.app.POST("/login", handlers.LoginHandler(a.as))
-	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), middleware.RequireAuth(a.as, a.config))
+	a.app.GET("/me", handlers.Profile(), reqauth)
+	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), reqauth)
 }
 
 func (a *App) Run() {
