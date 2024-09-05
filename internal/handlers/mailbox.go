@@ -8,7 +8,7 @@ import (
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
-func Messages(ms *mailservice.MailService) echo.HandlerFunc {
+func Mailbox(ms *mailservice.MailService) echo.HandlerFunc {
 
 	type response struct {
 		Messages []*entity.Message `json:"messages"`

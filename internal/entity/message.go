@@ -6,7 +6,7 @@ type From struct {
 }
 
 type Message struct {
-	Id       string `json:"id"`
+	Id       uint32 `json:"id"`
 	From     From   `json:"from"`
 	Subject  string `json:"subject"`
 	Body     string `json:"body"`

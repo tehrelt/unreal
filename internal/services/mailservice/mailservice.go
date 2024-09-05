@@ -3,13 +3,18 @@ package mailservice
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
 	"slices"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/mail"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/entity"
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
+	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
 type MailService struct {
@@ -124,7 +129,7 @@ func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.M
 		}
 
 		if m.Envelope != nil {
-			msg.Id = m.Envelope.MessageId
+			msg.Id = m.SeqNum
 			msg.Subject = m.Envelope.Subject
 			from := m.Envelope.From[0]
 			msg.From = entity.From{
@@ -146,4 +151,114 @@ func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.M
 	}
 
 	return mm, nil
+}
+
+func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*entity.Message, error) {
+
+	log := slog.With(slog.String("Method", "Mail"))
+
+	u, ok := ctx.Value("user").(*entity.Claims)
+	if !ok {
+		return nil, fmt.Errorf("no user in context")
+	}
+
+	log.Debug("dialing imap", slog.Any("user", u))
+	c, cleanup, err := imaps.Dial(u.Email, u.Password, u.Host, u.Port)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect: %v", err)
+	}
+	defer cleanup()
+
+	mbox, err := c.Select(mailbox, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to select mailbox %q: %v", mailbox, err)
+	}
+
+	log.Debug("mailbox", slog.Any("mailbox", mbox))
+
+	seqSet := new(imap.SeqSet)
+	seqSet.AddNum(num)
+
+	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchRFC822}
+
+	msg := new(entity.Message)
+	messages := make(chan *imap.Message, 10)
+	done := make(chan error, 1)
+
+	go func() {
+		done <- c.Fetch(seqSet, items, messages)
+	}()
+
+	m := <-messages
+	if m == nil {
+		return nil, fmt.Errorf("failed to fetch message: %w", err)
+	}
+
+	log.Debug("message", slog.Any("message", m))
+
+	msg.IsRead = false
+	for _, flag := range m.Flags {
+		if flag == imap.SeenFlag {
+			msg.IsRead = true
+			break
+		}
+	}
+
+	if m.Envelope != nil {
+		msg.Id = m.SeqNum
+		msg.Subject = m.Envelope.Subject
+		from := m.Envelope.From[0]
+		msg.From = entity.From{
+			Name:    from.PersonalName,
+			Address: from.Address(),
+		}
+		msg.SentDate = m.Envelope.Date.String()
+	}
+
+	if r := m.GetBody(&imap.BodySectionName{}); r != nil {
+		mr, err := mail.CreateReader(r)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create reader: %v", err)
+		}
+
+		for {
+			part, err := mr.NextPart()
+			if message.IsUnknownEncoding(err) {
+				slog.Debug("unknown encoding", sl.Err(err))
+				continue
+			} else if err != nil {
+				slog.Warn("failed to read part", sl.Err(err))
+				break
+			}
+
+			switch h := part.Header.(type) {
+			case *mail.InlineHeader:
+				body, _ := io.ReadAll(part.Body)
+				slog.Debug("read body", slog.String("body", string(body)))
+				msg.Body = string(body)
+			case *mail.AttachmentHeader:
+				filename, _ := h.Filename()
+
+				file, err := os.Create(filename)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create file: %v", err)
+				}
+				defer file.Close()
+
+				_, err = io.Copy(file, part.Body)
+				if err != nil {
+					return nil, fmt.Errorf("failed to save attachment: %v", err)
+				}
+				slog.Debug("saved attachment", slog.String("filename", filename))
+			}
+		}
+	}
+
+	slog.Debug("fetched message", slog.Any("message", msg))
+
+	if err := <-done; err != nil {
+		return nil, fmt.Errorf("failed to fetch messages: %v", err)
+	}
+
+	return msg, nil
 }

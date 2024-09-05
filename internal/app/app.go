@@ -42,7 +42,8 @@ func (a *App) initRoutes() {
 	a.app.POST("/login", handlers.LoginHandler(a.as))
 	a.app.GET("/me", handlers.Profile(), reqauth)
 	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), reqauth)
-	a.app.GET("/:mailbox", handlers.Messages(a.ms), reqauth)
+	a.app.GET("/:mailbox/mail", handlers.Message(a.ms), reqauth)
+	a.app.GET("/:mailbox", handlers.Mailbox(a.ms), reqauth)
 }
 
 func (a *App) Run() {

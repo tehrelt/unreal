@@ -10,6 +10,7 @@ require (
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/emersion/go-imap/v2 v2.0.0-beta.3 // indirect
+	github.com/emersion/go-message v0.18.1 // indirect
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/samber/lo v1.47.0 // indirect
