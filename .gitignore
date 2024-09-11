@@ -3,3 +3,6 @@ bin/
 .env
 
 wire_gen.go
+
+*.jpg
+*.png

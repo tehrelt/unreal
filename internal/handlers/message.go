@@ -14,7 +14,7 @@ import (
 func Message(ms *mailservice.MailService) echo.HandlerFunc {
 
 	type response struct {
-		Mail *entity.Message `json:"mail"`
+		Mail *entity.MessageWithBody `json:"mail"`
 	}
 
 	return func(c echo.Context) error {

@@ -10,7 +10,7 @@ import (
 func Profile() echo.HandlerFunc {
 	type response struct {
 		Email string `json:"email"`
-		Host  string `json:"host"`
+		// Host  string `json:"host"`
 	}
 	return func(c echo.Context) error {
 		u := c.Get("user").(*entity.Claims)
@@ -23,7 +23,6 @@ func Profile() echo.HandlerFunc {
 
 		return c.JSON(200, &response{
 			Email: u.Email,
-			Host:  u.Host,
 		})
 	}
 }
