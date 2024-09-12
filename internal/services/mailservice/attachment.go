@@ -12,12 +12,13 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
+	"github.com/google/uuid"
 	"github.com/tehrelt/unreal/internal/entity"
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (s *MailService) GetAttachment(ctx context.Context, mailbox string, mailnum uint32, targetCid string) (r io.Reader, ct string, err error) {
+func (s *MailService) GetAttachment(ctx context.Context, mailbox string, mailnum uint32, target string) (r io.Reader, ct string, err error) {
 
 	log := slog.With(slog.String("Method", "Mail"))
 
@@ -25,7 +26,7 @@ func (s *MailService) GetAttachment(ctx context.Context, mailbox string, mailnum
 		"find an attachment",
 		slog.String("mailbox", mailbox),
 		slog.Any("mailnum", mailnum),
-		slog.String("targetCid", targetCid),
+		slog.String("target", target),
 	)
 
 	u, ok := ctx.Value("user").(*entity.Claims)
@@ -95,15 +96,37 @@ func (s *MailService) GetAttachment(ctx context.Context, mailbox string, mailnum
 					return nil, "", fmt.Errorf("failed to get content type: %v", err)
 				}
 
-				contains := strings.Contains(cid, targetCid)
+				contains := strings.Contains(cid, target)
 
-				log.Debug("comparing cids", slog.Any("ct", cid), slog.Any("targetCid", targetCid), slog.Any("res", contains))
+				log.Debug("comparing cids", slog.Any("ct", cid), slog.Any("targetCid", target), slog.Any("res", contains))
 
 				if contains {
 					log.Debug("found a cid")
 					buf := new(bytes.Buffer)
 					buf.ReadFrom(part.Body)
 					r = buf
+				}
+
+			case *mail.AttachmentHeader:
+
+				filename, err := h.Filename()
+				if err != nil {
+					slog.Debug("failed to read filename", sl.Err(err))
+					filename = fmt.Sprintf("file-%s", uuid.New())
+				}
+
+				if strings.Compare(filename, target) == 0 {
+					ct, _, err = h.ContentType()
+					if err != nil {
+						slog.Warn("failed to get content type", sl.Err(err))
+						ct = "application/octet-stream"
+					}
+
+					log.Debug("found a filename", slog.Any("filename", filename), slog.Any("targetCid", target))
+					buf := new(bytes.Buffer)
+					buf.ReadFrom(part.Body)
+					r = buf
+					break
 				}
 			}
 		}

@@ -128,9 +128,11 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 						slog.Debug("cid is empty")
 					}
 
+					cid = strings.Trim(cid, "<>")
+
 					msg.Attachments = append(msg.Attachments, entity.Attachment{
 						ContentId:   cid,
-						Filename:    "file" + uuid.NewString(),
+						Filename:    cid,
 						ContentType: ct,
 					})
 				}
@@ -155,7 +157,7 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 				}
 
 				msg.Attachments = append(msg.Attachments, entity.Attachment{
-					ContentId:   cid,
+					ContentId:   filename,
 					Filename:    filename,
 					ContentType: ct,
 				})
@@ -172,12 +174,11 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 			slog.Debug("failed to compile regexp:", sl.Err(err))
 		}
 		msg.Body = re.ReplaceAllString(msg.Body, fmt.Sprintf(
-			"http://%s/attachment/%s?mailnum=%d&mailbox=%s&cid=%s",
+			"http://%s/attachment/%s?mailnum=%d&mailbox=%s",
 			s.cfg.Host,
-			attachment.Filename,
+			cid,
 			num,
 			mailbox,
-			cid,
 		))
 	}
 

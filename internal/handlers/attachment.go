@@ -54,14 +54,14 @@ func Attachment(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		cid := c.QueryParam("cid")
-		if cid == "" {
+		filename := c.Param("filename")
+		if filename == "" {
 			return c.JSON(echo.ErrBadRequest.Code, map[string]any{
 				"error": "emptry cid",
 			})
 		}
 
-		reader, ct, err := ms.GetAttachment(context.WithValue(c.Request().Context(), "user", user), mailbox, uint32(inum), cid)
+		reader, ct, err := ms.GetAttachment(context.WithValue(c.Request().Context(), "user", user), mailbox, uint32(inum), filename)
 		if err != nil {
 			slog.Error("failed to get mail", sl.Err(err))
 			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{
@@ -76,6 +76,8 @@ func Attachment(ms *mailservice.MailService) echo.HandlerFunc {
 				"error": err.Error(),
 			})
 		}
+
+		slog.Info("got attachment", slog.String("filename", filename), slog.Int("size", len(body)), slog.String("ct", ct))
 
 		return c.Blob(200, ct, body)
 	}
