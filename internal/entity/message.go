@@ -1,15 +1,17 @@
 package entity
 
 import (
-	"bytes"
-	"io"
-	"strings"
 	"time"
 )
 
 type AddressInfo struct {
 	Name    string `json:"name"`
 	Address string `json:"address"`
+}
+type Attachment struct {
+	ContentId   string `json:"contentId"`
+	ContentType string `json:"contentType"`
+	Filename    string `json:"filename"`
 }
 
 type Message struct {
@@ -21,28 +23,8 @@ type Message struct {
 	IsRead   bool          `json:"isRead"`
 }
 
-type Body struct {
-	ContentType string `json:"contentType"`
-	Body        IBody  `json:"body"`
-}
-
-type IBody interface {
-	Reader() io.Reader
-}
-
-type PlainBody string
-
-func (b PlainBody) Reader() io.Reader {
-	return strings.NewReader(string(b))
-}
-
-type BytesBody []byte
-
-func (b BytesBody) Reader() io.Reader {
-	return bytes.NewBuffer(b)
-}
-
 type MessageWithBody struct {
 	Message
-	Content []Body `json:"content"`
+	Body        string       `json:"body"`
+	Attachments []Attachment `json:"attachments"`
 }

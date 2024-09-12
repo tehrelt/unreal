@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log/slog"
+	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/tehrelt/unreal/internal/dto"
@@ -29,6 +30,14 @@ func LoginHandler(as *authservice.AuthService) echo.HandlerFunc {
 			slog.Error("failed to login:", sl.Err(err))
 			return echo.ErrInternalServerError
 		}
+
+		c.SetCookie(&http.Cookie{
+			Name:     "token",
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteDefaultMode,
+		})
 
 		return c.JSON(200, &response{
 			Token: token,

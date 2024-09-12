@@ -1,15 +1,19 @@
 package mailservice
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"regexp"
 	"strings"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
+	"github.com/google/uuid"
 	"github.com/tehrelt/unreal/internal/entity"
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
@@ -94,60 +98,87 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 
 		for {
 			part, err := mr.NextPart()
+
 			if message.IsUnknownEncoding(err) {
 				log.Debug("unknown encoding", sl.Err(err))
 				continue
+			} else if errors.Is(err, io.EOF) {
+				break
 			} else if err != nil {
 				log.Warn("failed to read part", sl.Err(err))
 				break
 			}
 
-			log.Debug("part header", slog.Any("header", part.Header))
-
 			switch h := part.Header.(type) {
 			case *mail.InlineHeader:
-				body, _ := io.ReadAll(part.Body)
 
 				ct, _, err := h.ContentType()
 				if err != nil {
 					return nil, fmt.Errorf("failed to read content type: %v", err)
 				}
-				log.Debug("part", slog.String("content-type", ct))
 
-				var bd entity.IBody
+				if strings.Compare(ct, "text/html") == 0 {
+					buf := new(bytes.Buffer)
+					buf.ReadFrom(part.Body)
+					msg.Body = buf.String()
+				} else if strings.HasPrefix(ct, "image/") {
 
-				log.Debug("body", slog.String("content-type", ct))
+					cid := h.Get("Content-Id")
+					if cid != "" {
+						slog.Debug("cid is empty")
+					}
 
-				if strings.Compare(ct, "text/plain") == 0 || strings.Compare(ct, "text/html") == 0 {
-					bd = entity.PlainBody(string(body))
-				} else {
-					bd = entity.BytesBody(body)
+					msg.Attachments = append(msg.Attachments, entity.Attachment{
+						ContentId:   cid,
+						Filename:    "file" + uuid.NewString(),
+						ContentType: ct,
+					})
 				}
-
-				msg.Content = append(msg.Content, entity.Body{
-					ContentType: ct,
-					Body:        bd,
-				})
 
 			case *mail.AttachmentHeader:
 
-				slog.Debug("read attachment", slog.Any("attachment", h))
+				filename, err := h.Filename()
+				if err != nil {
+					slog.Debug("failed to read filename", sl.Err(err))
+					filename = fmt.Sprintf("file-%s", uuid.New())
+				}
 
-				// filename, _ := h.Filename()
+				ct, _, err := h.ContentType()
+				if err != nil {
+					slog.Debug("failed to read content type", sl.Err(err))
+					ct = "application/octet-stream"
+				}
 
-				// file, err := os.Create(filename)
-				// if err != nil {
-				// 	return nil, fmt.Errorf("failed to create file: %v", err)
-				// }
-				// defer file.Close()
+				cid := h.Get("Content-Id")
+				if cid != "" {
+					slog.Debug("cid is empty")
+				}
 
-				// _, err = io.Copy(file, part.Body)
-				// if err != nil {
-				// 	return nil, fmt.Errorf("failed to save attachment: %v", err)
-				// }
-				// slog.Debug("saved attachment", slog.String("filename", filename))
+				msg.Attachments = append(msg.Attachments, entity.Attachment{
+					ContentId:   cid,
+					Filename:    filename,
+					ContentType: ct,
+				})
 			}
 		}
+	}
+
+	slog.Info("message", slog.Any("mail", msg))
+
+	for _, attachment := range msg.Attachments {
+		cid := strings.Trim(attachment.ContentId, "<>")
+		re, err := regexp.Compile(`cid:` + regexp.QuoteMeta(cid))
+		if err != nil {
+			slog.Debug("failed to compile regexp:", sl.Err(err))
+		}
+		msg.Body = re.ReplaceAllString(msg.Body, fmt.Sprintf(
+			"http://%s/attachment/%s?mailnum=%d&mailbox=%s&cid=%s",
+			s.cfg.Host,
+			attachment.Filename,
+			num,
+			mailbox,
+			cid,
+		))
 	}
 
 	if err := <-done; err != nil {

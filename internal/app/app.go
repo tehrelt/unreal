@@ -33,8 +33,9 @@ func (a *App) initRoutes() {
 
 	a.app.Use(emw.Logger())
 	a.app.Use(emw.CORSWithConfig(emw.CORSConfig{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
+		AllowCredentials: true,
 	}))
 
 	reqauth := mw.RequireAuth(a.as, a.config)
@@ -44,6 +45,7 @@ func (a *App) initRoutes() {
 	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), reqauth)
 	a.app.GET("/:mailbox/mail", handlers.Message(a.ms), reqauth)
 	a.app.GET("/:mailbox", handlers.Mailbox(a.ms), reqauth)
+	a.app.GET("/attachment/:fileName", handlers.Attachment(a.ms), reqauth)
 }
 
 func (a *App) Run() {

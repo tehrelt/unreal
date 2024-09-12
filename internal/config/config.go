@@ -14,6 +14,7 @@ import (
 
 type Config struct {
 	Env  string `env:"ENV" env-default:"local"`
+	Host string `env:"HOST" env-default:"localhost"`
 	Port int    `env:"PORT" env-required:"true" env-default:"4200"`
 
 	App struct {
