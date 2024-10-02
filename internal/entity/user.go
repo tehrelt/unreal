@@ -6,6 +6,6 @@ type Credentials struct {
 }
 
 type Connection struct {
-	Host string
-	Port int
+	Host string `json:"host"`
+	Port int    `json:"port"`
 }
