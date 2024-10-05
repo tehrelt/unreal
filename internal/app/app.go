@@ -1,8 +1,6 @@
 package app
 
 import (
-	"fmt"
-
 	"github.com/labstack/echo/v4"
 	emw "github.com/labstack/echo/v4/middleware"
 	"github.com/tehrelt/unreal/internal/config"
@@ -33,7 +31,7 @@ func (a *App) initRoutes() {
 
 	a.app.Use(emw.Logger())
 	a.app.Use(emw.CORSWithConfig(emw.CORSConfig{
-		AllowOrigins:     []string{"http://localhost:3000", "http://unreal:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://unreal:3000", "http://10.244.0.13:3000"},
 		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
 		AllowCredentials: true,
 	}))
@@ -54,7 +52,7 @@ func (a *App) Run() {
 
 	a.initRoutes()
 
-	port := a.config.Port
-	addr := fmt.Sprintf(":%d", port)
-	a.app.Logger.Fatal(a.app.Start(addr))
+	host := a.config.Host
+
+	a.app.Logger.Fatal(a.app.Start(host))
 }

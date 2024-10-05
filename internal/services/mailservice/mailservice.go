@@ -20,33 +20,32 @@ func New(cfg *config.Config) *MailService {
 	return &MailService{cfg: cfg}
 }
 
-func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.Message, error) {
+func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.Message, int, error) {
 	log := slog.With(slog.String("Method", "Messages"))
 
 	u, ok := ctx.Value("user").(*entity.Claims)
 	if !ok {
-		return nil, fmt.Errorf("no user in context")
+		return nil, 0, fmt.Errorf("no user in context")
 	}
 
 	log.Debug("dialing imap", slog.Any("user", u))
 	c, cleanup, err := imaps.Dial(u.Email, u.Password, u.Imap.Host, u.Imap.Port)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect: %v", err)
+		return nil, 0, fmt.Errorf("failed to connect: %v", err)
 	}
 	defer cleanup()
 
 	mbox, err := c.Select(mailbox, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to select mailbox %q: %v", mailbox, err)
+		return nil, 0, fmt.Errorf("failed to select mailbox %q: %v", mailbox, err)
 	}
 
 	log.Debug("mailbox", slog.Any("mailbox", mbox))
 
 	seqSet := new(imap.SeqSet)
-	seqSet.AddRange(1, mbox.Messages)
+	seqSet.AddRange(mbox.Messages, 1)
 
 	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags}
-
 	mm := make([]*entity.Message, 0, mbox.Messages)
 
 	messages := make(chan *imap.Message, 10)
@@ -88,8 +87,8 @@ func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.M
 	slices.Reverse(mm)
 
 	if err := <-done; err != nil {
-		return nil, fmt.Errorf("failed to fetch messages: %v", err)
+		return nil, 0, fmt.Errorf("failed to fetch messages: %v", err)
 	}
 
-	return mm, nil
+	return mm, int(mbox.Messages), nil
 }

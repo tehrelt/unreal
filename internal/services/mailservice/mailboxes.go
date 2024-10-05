@@ -29,6 +29,7 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 	mbx := make([]*entity.Mailbox, 0, 10)
 	mailboxes := make(chan *imap.MailboxInfo, 10)
 	done := make(chan error, 1)
+
 	go func() {
 		done <- c.List("", "*", mailboxes)
 	}()

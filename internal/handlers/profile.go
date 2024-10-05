@@ -10,7 +10,6 @@ import (
 func Profile() echo.HandlerFunc {
 	type response struct {
 		Email string `json:"email"`
-		// Host  string `json:"host"`
 	}
 	return func(c echo.Context) error {
 		u := c.Get("user").(*entity.Claims)
