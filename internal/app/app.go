@@ -33,7 +33,7 @@ func (a *App) initRoutes() {
 
 	a.app.Use(emw.Logger())
 	a.app.Use(emw.CORSWithConfig(emw.CORSConfig{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://unreal:3000"},
 		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
 		AllowCredentials: true,
 	}))
@@ -46,6 +46,8 @@ func (a *App) initRoutes() {
 	a.app.GET("/:mailbox/mail", handlers.Message(a.ms), reqauth)
 	a.app.GET("/:mailbox", handlers.Mailbox(a.ms), reqauth)
 	a.app.GET("/attachment/:filename", handlers.Attachment(a.ms), reqauth)
+
+	a.app.POST("/send", handlers.SendMail(a.ms), reqauth)
 }
 
 func (a *App) Run() {
