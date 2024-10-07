@@ -36,6 +36,11 @@ type Config struct {
 		Ttl       time.Duration
 		TtlString string `env:"JWT_TTL" env-required:"true" env-default:"10m"`
 	}
+
+	Redis struct {
+		Host string `env:"REDIS_HOST" env-required:"true" env-default:"localhost"`
+		Port int    `env:"REDIS_PORT" env-required:"true" env-default:"6379"`
+	}
 }
 
 func New() *Config {
