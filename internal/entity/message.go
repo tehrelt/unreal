@@ -27,4 +27,5 @@ type MessageWithBody struct {
 	Message
 	Body        string       `json:"body"`
 	Attachments []Attachment `json:"attachments"`
+	Embedded    []Attachment `json:"embedded"`
 }
