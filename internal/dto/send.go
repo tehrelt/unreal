@@ -1,10 +1,13 @@
 package dto
 
-import "io"
+import (
+	"io"
+	"mime/multipart"
+)
 
 type SendMessageDto struct {
 	To          []string
 	Subject     string
 	Body        io.Reader
-	Attachments []io.Reader
+	Attachments []*multipart.FileHeader
 }
