@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -48,7 +49,7 @@ func (s *SessionStorage) decode(in io.Reader) (*entity.SessionInfo, error) {
 	return info, nil
 }
 
-func (s *SessionStorage) Save(ctx context.Context, in *entity.SessionInfo) (string, error) {
+func (s *SessionStorage) Save(ctx context.Context, in *entity.SessionInfo, ttlOpt ...time.Duration) (string, error) {
 	log := s.logger.With(slog.String("method", "Save"))
 
 	buf, err := s.encode(in)
@@ -65,7 +66,20 @@ func (s *SessionStorage) Save(ctx context.Context, in *entity.SessionInfo) (stri
 		return "", nil
 	}
 
-	if _, err := s.client.Set(ctx, id, content, 0).Result(); err != nil {
+	ttl := func() time.Duration {
+		if ttlOpt != nil {
+			return ttlOpt[0]
+		}
+		return 0
+	}()
+
+	slog.Debug(
+		"saving session",
+		slog.String("id", id),
+		slog.String("content", string(content)),
+		slog.Duration("ttl", ttl),
+	)
+	if _, err := s.client.Set(ctx, id, content, ttl).Result(); err != nil {
 		log.Error("error saving session", sl.Err(err))
 		return "", nil
 	}

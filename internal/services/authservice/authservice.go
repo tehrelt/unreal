@@ -3,6 +3,7 @@ package authservice
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/entity"
@@ -10,7 +11,7 @@ import (
 
 type SessionStorage interface {
 	Find(ctx context.Context, id string) (*entity.SessionInfo, error)
-	Save(ctx context.Context, in *entity.SessionInfo) (id string, err error)
+	Save(ctx context.Context, in *entity.SessionInfo, ttl ...time.Duration) (id string, err error)
 }
 
 type Encryptor interface {

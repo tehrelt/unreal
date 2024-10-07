@@ -32,7 +32,7 @@ func (s *AuthService) Login(ctx context.Context, in *dto.LoginDto) (string, erro
 
 	slog.Debug("creating session", slog.Any("session", info))
 
-	id, err := s.sessions.Save(ctx, info)
+	id, err := s.sessions.Save(ctx, info, s.cfg.Jwt.Ttl)
 	if err != nil {
 		return "", fmt.Errorf("unable to save session: %w", err)
 	}
