@@ -17,7 +17,7 @@ import (
 func (s *MailService) Send(ctx context.Context, req *dto.SendMessageDto) error {
 	log := slog.With(slog.String("Method", "Mail"))
 
-	u, ok := ctx.Value("user").(*entity.Claims)
+	u, ok := ctx.Value("user").(*entity.SessionInfo)
 	if !ok {
 		slog.Warn("no user in context", slog.Any("user", ctx.Value("user")))
 		return fmt.Errorf("no user in context")

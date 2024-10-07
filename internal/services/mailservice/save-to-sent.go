@@ -11,7 +11,7 @@ import (
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
 )
 
-func (ms *MailService) saveToSent(ctx context.Context, u *entity.Claims, rawMessage imap.Literal) error {
+func (ms *MailService) saveToSent(ctx context.Context, u *entity.SessionInfo, rawMessage imap.Literal) error {
 
 	log := slog.With(slog.String("Method", "saveToSent"))
 

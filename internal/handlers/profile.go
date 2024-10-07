@@ -12,7 +12,7 @@ func Profile() echo.HandlerFunc {
 		Email string `json:"email"`
 	}
 	return func(c echo.Context) error {
-		u := c.Get("user").(*entity.Claims)
+		u := c.Get("user").(*entity.SessionInfo)
 		if u == nil {
 			slog.Warn("no user in context")
 			return c.JSON(401, map[string]any{

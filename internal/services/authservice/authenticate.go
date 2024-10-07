@@ -6,11 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/tehrelt/unreal/internal/entity"
-	"github.com/tehrelt/unreal/internal/lib/aes"
 )
 
-func (s *AuthService) Authenticate(ctx context.Context, token string) (*entity.Claims, error) {
-
+func (s *AuthService) Authenticate(ctx context.Context, token string) (*entity.SessionInfo, error) {
 	claims, err := s.cfg.Jwt.RSA.Verify(token)
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify token: %w", err)
@@ -18,14 +16,19 @@ func (s *AuthService) Authenticate(ctx context.Context, token string) (*entity.C
 
 	slog.Debug("successful verify token", slog.Any("claims", claims))
 
-	pass, err := aes.Decrypt(s.cfg.AES.Secret, claims.Password)
+	info, err := s.sessions.Find(ctx, claims.Id)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decrypt password: %w", err)
+		return nil, fmt.Errorf("unable to find session: %w", err)
 	}
 
-	claims.Password = string(pass)
+	pass, err := s.decrypt(info.Password)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decrypt session: %w", err)
+	}
 
-	slog.Debug("authorized", slog.Any("claims", claims))
+	info.Password = pass
 
-	return claims, nil
+	slog.Debug("authorized", slog.Any("claims", info))
+
+	return info, nil
 }
