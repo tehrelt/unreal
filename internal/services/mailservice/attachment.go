@@ -29,7 +29,7 @@ func (s *MailService) GetAttachment(ctx context.Context, mailbox string, mailnum
 		slog.String("target", target),
 	)
 
-	u, ok := ctx.Value("user").(*entity.Claims)
+	u, ok := ctx.Value("user").(*entity.SessionInfo)
 	if !ok {
 		return nil, "", fmt.Errorf("no user in context")
 	}

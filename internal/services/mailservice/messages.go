@@ -14,7 +14,7 @@ import (
 func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.Message, int, error) {
 	log := slog.With(slog.String("Method", "Messages"))
 
-	u, ok := ctx.Value("user").(*entity.Claims)
+	u, ok := ctx.Value("user").(*entity.SessionInfo)
 	if !ok {
 		return nil, 0, fmt.Errorf("no user in context")
 	}

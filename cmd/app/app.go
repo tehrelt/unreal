@@ -13,11 +13,11 @@ func init() {
 
 func main() {
 
-	app, err := app.New()
+	app, cleanup, err := app.New()
 	if err != nil {
 		panic(err)
 	}
+	defer cleanup()
 
 	app.Run()
-
 }

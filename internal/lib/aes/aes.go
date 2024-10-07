@@ -10,10 +10,18 @@ import (
 	"log/slog"
 )
 
-func Encrypt(secretkey, plaintext string) (string, error) {
+type AesEncryptor struct {
+	secretkey string
+}
 
-	slog.Debug("encrypting", slog.String("secretkey", secretkey))
-	key := []byte(secretkey)
+func NewAesEncryptor(secretkey string) *AesEncryptor {
+	return &AesEncryptor{secretkey: secretkey}
+}
+
+func (e *AesEncryptor) Encrypt(plaintext string) (string, error) {
+
+	slog.Debug("encrypting", slog.String("secretkey", e.secretkey))
+	key := []byte(e.secretkey)
 	text := []byte(plaintext)
 
 	block, err := aes.NewCipher(key)
@@ -33,9 +41,9 @@ func Encrypt(secretkey, plaintext string) (string, error) {
 	return base64.URLEncoding.EncodeToString(ciphertext), nil
 }
 
-func Decrypt(secretkey, toDecrypt string) (string, error) {
+func (e *AesEncryptor) Decrypt(toDecrypt string) (string, error) {
 
-	key := []byte(secretkey)
+	key := []byte(e.secretkey)
 	ciphertext, err := base64.URLEncoding.DecodeString(toDecrypt)
 	if err != nil {
 		return "", fmt.Errorf("base64.URLEncoding.DecodeString: %v", err)

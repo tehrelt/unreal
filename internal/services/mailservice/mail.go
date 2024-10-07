@@ -23,7 +23,7 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 
 	log := slog.With(slog.String("Method", "Mail"))
 
-	u, ok := ctx.Value("user").(*entity.Claims)
+	u, ok := ctx.Value("user").(*entity.SessionInfo)
 	if !ok {
 		return nil, fmt.Errorf("no user in context")
 	}
