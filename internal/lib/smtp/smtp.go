@@ -2,20 +2,25 @@ package smtp
 
 import (
 	"fmt"
+	"log/slog"
 	"net/smtp"
 )
 
-func Dial(email, password, host string, port int) (*smtp.Client, func(), error) {
+func Dial(email, password, host string, port int) (smtp.Auth, error) {
+
+	slog.Debug("dial smtp", slog.String("host", host), slog.Int("port", port))
 	client, err := smtp.Dial(fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	defer client.Close()
+
+	auth := smtp.PlainAuth("", email, password, host)
+
+	slog.Debug("auth smtp", slog.String("email", email))
+	if err := client.Auth(auth); err != nil {
+		return nil, err
 	}
 
-	if err := client.Auth(smtp.PlainAuth("", email, password, host)); err != nil {
-		return nil, nil, err
-	}
-
-	return client, func() {
-		client.Close()
-	}, nil
+	return auth, nil
 }

@@ -124,15 +124,14 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 				} else if strings.HasPrefix(ct, "image/") {
 
 					cid := h.Get("Content-Id")
-					if cid != "" {
+					if cid == "" {
 						slog.Debug("cid is empty")
 					}
 
 					cid = strings.Trim(cid, "<>")
 
-					msg.Attachments = append(msg.Attachments, entity.Attachment{
+					msg.Embedded = append(msg.Attachments, entity.Attachment{
 						ContentId:   cid,
-						Filename:    cid,
 						ContentType: ct,
 					})
 				}
@@ -152,27 +151,28 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 				}
 
 				cid := h.Get("Content-Id")
-				if cid != "" {
-					slog.Debug("cid is empty")
+				if cid != filename {
+					msg.Attachments = append(msg.Attachments, entity.Attachment{
+						ContentId:   cid,
+						Filename:    filename,
+						ContentType: ct,
+					})
 				}
-
-				msg.Attachments = append(msg.Attachments, entity.Attachment{
-					ContentId:   filename,
-					Filename:    filename,
-					ContentType: ct,
-				})
 			}
 		}
 	}
 
 	slog.Info("message", slog.Any("mail", msg))
 
-	for _, attachment := range msg.Attachments {
+	for _, attachment := range msg.Embedded {
+
 		cid := strings.Trim(attachment.ContentId, "<>")
+
 		re, err := regexp.Compile(`cid:` + regexp.QuoteMeta(cid))
 		if err != nil {
 			slog.Debug("failed to compile regexp:", sl.Err(err))
 		}
+
 		msg.Body = re.ReplaceAllString(msg.Body, fmt.Sprintf(
 			"http://%s/attachment/%s?mailnum=%d&mailbox=%s",
 			s.cfg.Host,
@@ -180,6 +180,7 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 			num,
 			mailbox,
 		))
+
 	}
 
 	if err := <-done; err != nil {

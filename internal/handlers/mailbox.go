@@ -12,6 +12,7 @@ func Mailbox(ms *mailservice.MailService) echo.HandlerFunc {
 
 	type response struct {
 		Messages []*entity.Message `json:"messages"`
+		Total    int               `json:"total"`
 	}
 
 	return func(c echo.Context) error {
@@ -25,7 +26,7 @@ func Mailbox(ms *mailservice.MailService) echo.HandlerFunc {
 
 		mailbox := c.Param("mailbox")
 
-		messages, err := ms.Messages(
+		messages, total, err := ms.Messages(
 			context.WithValue(c.Request().Context(), "user", user),
 			mailbox,
 		)
@@ -37,6 +38,7 @@ func Mailbox(ms *mailservice.MailService) echo.HandlerFunc {
 
 		return c.JSON(200, &response{
 			Messages: messages,
+			Total:    total,
 		})
 	}
 }
