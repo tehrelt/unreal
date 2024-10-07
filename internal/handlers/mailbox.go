@@ -24,7 +24,7 @@ func Mailbox(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		mailbox := c.Param("mailbox")
+		mailbox := c.Param("*")
 
 		messages, total, err := ms.Messages(
 			context.WithValue(c.Request().Context(), "user", user),

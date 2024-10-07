@@ -42,7 +42,7 @@ func (a *App) initRoutes() {
 	a.app.GET("/me", handlers.Profile(), reqauth)
 	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), reqauth)
 	a.app.GET("/:mailbox/mail", handlers.Message(a.ms), reqauth)
-	a.app.GET("/:mailbox", handlers.Mailbox(a.ms), reqauth)
+	a.app.GET("/*", handlers.Mailbox(a.ms), reqauth)
 	a.app.GET("/attachment/:filename", handlers.Attachment(a.ms), reqauth)
 
 	a.app.POST("/send", handlers.SendMail(a.ms), reqauth)
