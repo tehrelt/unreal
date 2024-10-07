@@ -19,7 +19,7 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*entity.MessageWithBody, error) {
+func (s *MailService) Mailbox(ctx context.Context, mailbox entity.MailboxName, num uint32) (*entity.MessageWithBody, error) {
 
 	log := slog.With(slog.String("Method", "Mail"))
 
@@ -35,7 +35,7 @@ func (s *MailService) Mail(ctx context.Context, mailbox string, num uint32) (*en
 	}
 	defer cleanup()
 
-	mbox, err := c.Select(mailbox, false)
+	mbox, err := c.Select(mailbox.Normalized(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to select mailbox %q: %v", mailbox, err)
 	}

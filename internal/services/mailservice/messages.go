@@ -11,7 +11,7 @@ import (
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
 )
 
-func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.Message, int, error) {
+func (s *MailService) Messages(ctx context.Context, mailbox entity.MailboxName) ([]*entity.Message, int, error) {
 	log := slog.With(slog.String("Method", "Messages"))
 
 	u, ok := ctx.Value("user").(*entity.SessionInfo)
@@ -26,7 +26,7 @@ func (s *MailService) Messages(ctx context.Context, mailbox string) ([]*entity.M
 	}
 	defer cleanup()
 
-	mbox, err := c.Select(mailbox, false)
+	mbox, err := c.Select(mailbox.Normalized(), false)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to select mailbox %q: %v", mailbox, err)
 	}

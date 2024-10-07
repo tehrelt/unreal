@@ -24,11 +24,11 @@ func Mailbox(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		mailbox := c.Param("*")
+		mailbox := c.Param("mailbox")
 
 		messages, total, err := ms.Messages(
 			context.WithValue(c.Request().Context(), "user", user),
-			mailbox,
+			entity.NewMailboxName(mailbox),
 		)
 		if err != nil {
 			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{

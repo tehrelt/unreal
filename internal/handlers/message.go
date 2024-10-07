@@ -29,7 +29,7 @@ func Message(ms *mailservice.MailService) echo.HandlerFunc {
 		mailbox := c.Param("mailbox")
 		if mailbox == "" {
 			return c.JSON(echo.ErrBadRequest.Code, map[string]any{
-				"error": "emptry mailbox",
+				"error": "empty mailbox",
 			})
 		}
 
@@ -53,7 +53,7 @@ func Message(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		mail, err := ms.Mail(context.WithValue(c.Request().Context(), "user", user), mailbox, uint32(inum))
+		mail, err := ms.Mailbox(context.WithValue(c.Request().Context(), "user", user), entity.MailboxName(mailbox), uint32(inum))
 		if err != nil {
 			slog.Error("failed to get mail", sl.Err(err))
 			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{

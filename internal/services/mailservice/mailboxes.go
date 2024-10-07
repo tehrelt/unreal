@@ -50,7 +50,7 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 		}
 
 		mb := &entity.Mailbox{
-			Name:        m.Name,
+			Name:        entity.NewMailboxName(m.Name),
 			Attributes:  m.Attributes,
 			UnreadCount: len(ids),
 		}
