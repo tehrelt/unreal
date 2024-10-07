@@ -42,17 +42,15 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 			return nil, fmt.Errorf("failed to select mailbox %q: %v", m.Name, err)
 		}
 
-		criteria := imap.NewSearchCriteria()
-		criteria.WithoutFlags = []string{"\\Seen"}
-		ids, err := c.Search(criteria)
+		unread, err := s.unreadMessage(ctx, c)
 		if err != nil {
-			return nil, fmt.Errorf("failed to search mailbox %q: %v", m.Name, err)
+			return nil, err
 		}
 
 		mb := &entity.Mailbox{
 			Name:        entity.NewMailboxName(m.Name),
 			Attributes:  m.Attributes,
-			UnreadCount: len(ids),
+			UnreadCount: unread,
 		}
 
 		mbx = append(mbx, mb)
