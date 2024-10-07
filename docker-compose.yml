@@ -1,0 +1,14 @@
+services:
+  redis:
+    image: redis:7.2.4-alpine
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    env_file:
+      - .env
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+    name: unreal-redis-data
