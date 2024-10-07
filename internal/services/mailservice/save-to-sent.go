@@ -31,7 +31,7 @@ func (ms *MailService) saveToSent(ctx context.Context, u *entity.Claims, rawMess
 		return fmt.Errorf("failed to select: %v", err)
 	}
 
-	if err := c.Append(sentFolder, nil, time.Now(), rawMessage); err != nil {
+	if err := c.Append(sentFolder, []string{imap.SeenFlag}, time.Now(), rawMessage); err != nil {
 		return fmt.Errorf("failed to append: %v", err)
 	}
 
