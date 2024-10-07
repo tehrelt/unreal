@@ -1,6 +1,7 @@
 package mailservice
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -67,10 +68,21 @@ func (s *MailService) Send(ctx context.Context, req *dto.SendMessageDto) error {
 		}))
 	}
 
+	buf := new(bytes.Buffer)
+	if _, err := m.WriteTo(buf); err != nil {
+		log.Error("cannot write message to buffer", sl.Err(err), slog.Any("message", m))
+		return fmt.Errorf("cannot write to buf: %w", err)
+	}
+
 	log.Debug("sending message", slog.Any("message", m))
 	if err := dialer.DialAndSend(m); err != nil {
 		log.Error("cannot send message", sl.Err(err), slog.Any("message", m))
 		return fmt.Errorf("cannot send: %w", err)
+	}
+
+	if err := s.saveToSent(ctx, u, buf); err != nil {
+		log.Error("cannot save message to sent", sl.Err(err), slog.Any("message", m))
+		return fmt.Errorf("cannot save to sent: %w", err)
 	}
 
 	return nil
