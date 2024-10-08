@@ -19,7 +19,7 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (s *MailService) Mailbox(ctx context.Context, mailbox entity.MailboxName, num uint32) (*entity.MessageWithBody, error) {
+func (s *MailService) Message(ctx context.Context, mailbox entity.MailboxName, num uint32) (*entity.MessageWithBody, error) {
 
 	log := slog.With(slog.String("Method", "Mail"))
 
@@ -130,8 +130,9 @@ func (s *MailService) Mailbox(ctx context.Context, mailbox entity.MailboxName, n
 
 					cid = strings.Trim(cid, "<>")
 
-					msg.Embedded = append(msg.Attachments, entity.Attachment{
+					msg.Attachments = append(msg.Attachments, entity.Attachment{
 						ContentId:   cid,
+						Filename:    cid,
 						ContentType: ct,
 					})
 				}
@@ -150,21 +151,18 @@ func (s *MailService) Mailbox(ctx context.Context, mailbox entity.MailboxName, n
 					ct = "application/octet-stream"
 				}
 
-				cid := h.Get("Content-Id")
-				if cid != filename {
-					msg.Attachments = append(msg.Attachments, entity.Attachment{
-						ContentId:   cid,
-						Filename:    filename,
-						ContentType: ct,
-					})
-				}
+				msg.Attachments = append(msg.Attachments, entity.Attachment{
+					ContentId:   filename,
+					Filename:    filename,
+					ContentType: ct,
+				})
 			}
 		}
 	}
 
 	slog.Info("message", slog.Any("mail", msg))
 
-	for _, attachment := range msg.Embedded {
+	for _, attachment := range msg.Attachments {
 
 		cid := strings.Trim(attachment.ContentId, "<>")
 
