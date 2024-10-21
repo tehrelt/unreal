@@ -1,10 +1,12 @@
 package app
 
 import (
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	emw "github.com/labstack/echo/v4/middleware"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/handlers"
+	"github.com/tehrelt/unreal/internal/lib/httpvalidator"
 	mw "github.com/tehrelt/unreal/internal/middleware"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
@@ -29,6 +31,8 @@ func newApp(cfg *config.Config, as *authservice.AuthService, ms *mailservice.Mai
 
 func (a *App) initRoutes() {
 
+	a.app.Validator = httpvalidator.New(validator.New())
+
 	a.app.Use(emw.Logger())
 	a.app.Use(emw.CORSWithConfig(emw.CORSConfig{
 		AllowOrigins:     []string{"http://localhost:3000", "http://unreal:3000", "http://10.244.0.13:3000"},
@@ -43,7 +47,7 @@ func (a *App) initRoutes() {
 	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), reqauth)
 
 	mailbox := a.app.Group("/:mailbox", reqauth)
-	mailbox.GET("", handlers.Mailbox(a.ms))
+	mailbox.GET("", handlers.Messages(a.ms))
 	mailbox.GET("/mail", handlers.Message(a.ms))
 
 	a.app.GET("/attachment/:filename", handlers.Attachment(a.ms), reqauth)

@@ -6,23 +6,26 @@ import (
 	"log/slog"
 
 	"github.com/emersion/go-imap"
+	"github.com/tehrelt/unreal/internal/domain"
 	"github.com/tehrelt/unreal/internal/entity"
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
+	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
 func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) {
 
-	log := slog.With(slog.String("Method", "Mailboxes"))
+	fn := "mailservice.Mailboxes"
+	log := slog.With(sl.Method(fn))
 
 	u, ok := ctx.Value("user").(*entity.SessionInfo)
 	if !ok {
-		return nil, fmt.Errorf("no user in context")
+		return nil, fmt.Errorf("%s: %w", fn, domain.ErrUserNotInContext)
 	}
 
 	log.Debug("dialing imap", slog.Any("user", u))
 	c, cleanup, err := imaps.Dial(u.Email, u.Password, u.Imap.Host, u.Imap.Port)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect: %v", err)
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 	defer cleanup()
 
@@ -35,17 +38,17 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 	}()
 
 	for m := range mailboxes {
-		slog.Debug("mailbox", slog.Any("mailbox", m))
-
-		_, err := c.Select(m.Name, false)
+		_, err := c.Select(m.Name, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to select mailbox %q: %v", m.Name, err)
+			return nil, fmt.Errorf("%s: %w", fn, err)
 		}
 
 		unread, err := s.unreadMessage(ctx, c)
 		if err != nil {
 			return nil, err
 		}
+
+		slog.Debug("mailbox attributes", slog.String("mailbox", m.Name), slog.Any("attributes", m.Attributes))
 
 		mb := &entity.Mailbox{
 			Name:        entity.NewMailboxName(m.Name),
@@ -57,7 +60,7 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 	}
 
 	if err := <-done; err != nil {
-		return nil, fmt.Errorf("failed to list mailboxes: %v", err)
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	return mbx, nil

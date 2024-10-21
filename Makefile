@@ -3,19 +3,16 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
-build:
-	make gen
+build: gen
 	go build -o ./bin/app ./cmd/app
 
-run:
-	make build
+run: build
 	./bin/app
 
 wire-gen:
 	wire ./internal/app/
 
-gen:
-	make wire-gen
+gen: wire-gen
 
 .PHONY: cert
 cert:

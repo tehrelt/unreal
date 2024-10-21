@@ -3,13 +3,19 @@ package mailservice
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
+	"github.com/tehrelt/unreal/internal/domain"
+	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
 func (ms *MailService) findFolderByAttr(_ context.Context, c *client.Client, attribute string) (string, error) {
+
+	fn := "mailservice.findFolderByAttr"
+	log := slog.With(sl.Method(fn))
+
 	mailboxes := make(chan *imap.MailboxInfo, 10)
 	done := make(chan error, 1)
 
@@ -20,11 +26,15 @@ func (ms *MailService) findFolderByAttr(_ context.Context, c *client.Client, att
 	var folder string
 
 	for m := range mailboxes {
-		log.Println("Found mailbox:", m.Name, m.Attributes)
+		slog.Debug(
+			"comapring mailbox to attribute",
+			slog.String("mailbox", m.Name),
+			slog.String("attribute", attribute),
+		)
 		for _, attr := range m.Attributes {
 			if attr == attribute {
 				folder = m.Name
-				log.Println("Sent folder found:", folder)
+				log.Debug("found mailbox", slog.String("folder", folder))
 
 				return folder, nil
 			}
@@ -36,7 +46,7 @@ func (ms *MailService) findFolderByAttr(_ context.Context, c *client.Client, att
 	}
 
 	if folder == "" {
-		return "", fmt.Errorf("sent folder not found")
+		return "", fmt.Errorf("%s: %w", fn, domain.ErrMailboxNotFound)
 	}
 
 	return folder, nil

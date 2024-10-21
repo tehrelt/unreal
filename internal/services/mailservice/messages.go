@@ -4,42 +4,84 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
+	"math"
 
 	"github.com/emersion/go-imap"
+	"github.com/tehrelt/unreal/internal/dto"
 	"github.com/tehrelt/unreal/internal/entity"
 	imaps "github.com/tehrelt/unreal/internal/lib/imap"
+	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (s *MailService) Messages(ctx context.Context, mailbox entity.MailboxName) ([]*entity.Message, int, error) {
-	log := slog.With(slog.String("Method", "Messages"))
+const (
+	defaultLimit = 50
+)
+
+func (s *MailService) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error) {
+	fn := "mailservice.Messages"
+	log := slog.With(sl.Method(fn))
 
 	u, ok := ctx.Value("user").(*entity.SessionInfo)
 	if !ok {
-		return nil, 0, fmt.Errorf("no user in context")
+		return nil, fmt.Errorf("no user in context")
 	}
 
 	log.Debug("dialing imap", slog.Any("user", u))
 	c, cleanup, err := imaps.Dial(u.Email, u.Password, u.Imap.Host, u.Imap.Port)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to connect: %v", err)
+		return nil, fmt.Errorf("failed to connect: %v", err)
 	}
 	defer cleanup()
 
-	mbox, err := c.Select(mailbox.Normalized(), false)
+	mbox, err := c.Select(in.Mailbox.Normalized(), false)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to select mailbox %q: %v", mailbox, err)
+		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
-
 	log.Debug("mailbox", slog.Any("mailbox", mbox))
-
-	mm := make([]*entity.Message, 0, mbox.Messages)
 	if mbox.Messages == 0 {
-		return mm, int(mbox.Messages), nil
+		return &dto.FetchedMessagesDto{
+			Messages:    make([]entity.Message, 0),
+			Total:       0,
+			HasNextPage: false,
+		}, nil
 	}
+
+	page := int(math.Max(0, float64(in.Page-1)))
+	limit := in.Limit
+	offset := int(mbox.Messages) - (page * limit)
+
+	cursor := struct {
+		Start int
+		End   int
+	}{
+		Start: offset,
+		End: func() int {
+			expected := offset - limit
+			if expected <= 0 {
+				return 1
+			}
+			return expected
+		}(),
+	}
+
+	toFetch := cursor.Start - cursor.End + 1
+	out := &dto.FetchedMessagesDto{
+		Messages:    make([]entity.Message, toFetch),
+		Total:       int(mbox.Messages),
+		HasNextPage: cursor.End != 1,
+	}
+
+	log.Debug(
+		"fetching messages",
+		slog.Any("cursor", cursor),
+		slog.Int("limit", limit),
+		slog.Int("offset", offset),
+		slog.Int("total", int(mbox.Messages)),
+		slog.String("range", fmt.Sprintf("AddRange(%d, %d)", cursor.Start, cursor.End)),
+	)
 
 	seqSet := new(imap.SeqSet)
-	seqSet.AddRange(mbox.Messages, 1)
+	seqSet.AddRange(uint32(cursor.Start), uint32(cursor.End))
 
 	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags}
 
@@ -51,9 +93,8 @@ func (s *MailService) Messages(ctx context.Context, mailbox entity.MailboxName) 
 	}()
 
 	for m := range messages {
-		log.Debug("message", slog.Any("message", m))
 
-		msg := new(entity.Message)
+		var msg entity.Message
 
 		msg.IsRead = false
 		for _, flag := range m.Flags {
@@ -74,16 +115,17 @@ func (s *MailService) Messages(ctx context.Context, mailbox entity.MailboxName) 
 			msg.SentDate = m.Envelope.Date
 		}
 
-		slog.Debug("fetched message", slog.Any("message", msg))
+		log.Debug("fetched message", slog.Any("message", msg))
 
-		mm = append(mm, msg)
+		out.Messages[toFetch-1] = msg
+		toFetch--
 	}
 
-	slices.Reverse(mm)
+	// slices.Reverse(mm)
 
 	if err := <-done; err != nil {
-		return nil, 0, fmt.Errorf("failed to fetch messages: %v", err)
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	return mm, int(mbox.Messages), nil
+	return out, nil
 }
