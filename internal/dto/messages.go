@@ -3,7 +3,7 @@ package dto
 import "github.com/tehrelt/unreal/internal/entity"
 
 type FetchMessagesDto struct {
-	Mailbox entity.MailboxName
+	Mailbox string
 	Limit   int
 	Page    int
 }

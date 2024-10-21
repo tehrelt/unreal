@@ -42,7 +42,7 @@ func Message(ms *mailservice.MailService) echo.HandlerFunc {
 
 		mail, err := ms.Message(
 			context.WithValue(c.Request().Context(), "user", user),
-			entity.MailboxName(request.Mailbox),
+			request.Mailbox,
 			uint32(request.Mailnum),
 		)
 		if err != nil {

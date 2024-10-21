@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
+	"net/url"
 
 	"github.com/labstack/echo/v4"
 	"github.com/tehrelt/unreal/internal/dto"
@@ -35,12 +37,24 @@ func Messages(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		mailbox := c.Param("mailbox")
-		if mailbox == "" {
+		mailboxescaped := c.Param("mailbox")
+		if mailboxescaped == "" {
 			return c.JSON(echo.ErrBadRequest.Code, map[string]any{
 				"error": "no mailbox in path",
 			})
 		}
+
+		mailbox, err := url.QueryUnescape(mailboxescaped)
+		if err != nil {
+			return echo.NewHTTPError(500, err.Error())
+		}
+
+		slog.Debug(
+			"/messages request",
+			slog.String("mailbox", mailbox),
+			slog.Int("limit", request.Limit),
+			slog.Int("page", request.Page),
+		)
 
 		if err := echo.QueryParamsBinder(c).
 			Int("limit", &request.Limit).
@@ -57,10 +71,11 @@ func Messages(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		out, err := ms.Messages(
+		out,
+			err := ms.Messages(
 			context.WithValue(c.Request().Context(), "user", user),
 			&dto.FetchMessagesDto{
-				Mailbox: entity.NewMailboxName(mailbox),
+				Mailbox: mailbox,
 				Limit: func() int {
 					if request.Limit == 0 {
 						return defaultLimit

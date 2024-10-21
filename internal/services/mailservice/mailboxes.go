@@ -51,7 +51,7 @@ func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) 
 		slog.Debug("mailbox attributes", slog.String("mailbox", m.Name), slog.Any("attributes", m.Attributes))
 
 		mb := &entity.Mailbox{
-			Name:        entity.NewMailboxName(m.Name),
+			Name:        m.Name,
 			Attributes:  m.Attributes,
 			UnreadCount: unread,
 		}

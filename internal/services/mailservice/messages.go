@@ -33,7 +33,7 @@ func (s *MailService) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*
 	}
 	defer cleanup()
 
-	mbox, err := c.Select(in.Mailbox.Normalized(), false)
+	mbox, err := c.Select(in.Mailbox, false)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
