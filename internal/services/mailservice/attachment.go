@@ -18,7 +18,7 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (s *MailService) GetAttachment(ctx context.Context, mailbox string, mailnum uint32, target string) (r io.Reader, ct string, err error) {
+func (s *Service) GetAttachment(ctx context.Context, mailbox string, mailnum uint32, target string) (r io.Reader, ct string, err error) {
 
 	log := slog.With(slog.String("Method", "Mail"))
 

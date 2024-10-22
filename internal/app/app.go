@@ -17,10 +17,10 @@ type App struct {
 	config *config.Config
 
 	as *authservice.AuthService
-	ms *mailservice.MailService
+	ms *mailservice.Service
 }
 
-func newApp(cfg *config.Config, as *authservice.AuthService, ms *mailservice.MailService) *App {
+func newApp(cfg *config.Config, as *authservice.AuthService, ms *mailservice.Service) *App {
 	return &App{
 		app:    echo.New(),
 		config: cfg,

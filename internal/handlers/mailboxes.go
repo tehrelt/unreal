@@ -8,7 +8,7 @@ import (
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
-func Mailboxes(ms *mailservice.MailService) echo.HandlerFunc {
+func Mailboxes(ms *mailservice.Service) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx, err := extractUser(c)
 		if err != nil {

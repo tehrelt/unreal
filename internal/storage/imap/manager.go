@@ -1,4 +1,4 @@
-package manager
+package imap
 
 import (
 	"context"
@@ -7,20 +7,20 @@ import (
 	gctx "github.com/tehrelt/unreal/internal/context"
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/imap"
-	mctx "github.com/tehrelt/unreal/internal/storage/mail/context"
+	"github.com/tehrelt/unreal/internal/storage"
 )
 
-type MailManager struct {
-	ctxManager *mctx.MailContextManager
+var _ storage.Manager = (*Manager)(nil)
+
+type Manager struct {
+	*imapCtxManager
 }
 
-func New(key gctx.CtxKey) *MailManager {
-	return &MailManager{
-		ctxManager: mctx.New(key),
-	}
+func NewManager() storage.Manager {
+	return &Manager{defaultManager}
 }
 
-func (m *MailManager) Do(ctx context.Context, fn func(ctx context.Context) error) error {
+func (m *Manager) Do(ctx context.Context, fn func(ctx context.Context) error) error {
 
 	creds, ok := ctx.Value(gctx.CtxKeyUser).(*entity.SessionInfo)
 	if !ok {
@@ -33,7 +33,7 @@ func (m *MailManager) Do(ctx context.Context, fn func(ctx context.Context) error
 	}
 	defer cleanup()
 
-	nctx := m.ctxManager.Set(ctx, c)
+	nctx := m.set(ctx, c)
 
 	return fn(nctx)
 }

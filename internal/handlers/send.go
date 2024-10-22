@@ -9,7 +9,7 @@ import (
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
-func SendMail(ms *mailservice.MailService) echo.HandlerFunc {
+func SendMail(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 

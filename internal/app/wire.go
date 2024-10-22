@@ -12,13 +12,10 @@ import (
 	"github.com/google/wire"
 	"github.com/redis/go-redis/v9"
 	"github.com/tehrelt/unreal/internal/config"
-	gctx "github.com/tehrelt/unreal/internal/context"
 	"github.com/tehrelt/unreal/internal/lib/aes"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
-	"github.com/tehrelt/unreal/internal/storage"
-	"github.com/tehrelt/unreal/internal/storage/mail"
-	man "github.com/tehrelt/unreal/internal/storage/mail/manager"
+	"github.com/tehrelt/unreal/internal/storage/imap"
 	mredis "github.com/tehrelt/unreal/internal/storage/redis"
 )
 
@@ -40,10 +37,9 @@ func New() (*App, func(), error) {
 		),
 
 		wire.NewSet(
-			_ctxconnkey,
-			_ctxmanager,
-			mail.NewMailRepository,
-			wire.Bind(new(mailservice.MailRepository), new(*mail.MailRepository)),
+			imap.NewRepository,
+			imap.NewManager,
+			wire.Bind(new(mailservice.MailRepository), new(*imap.Repository)),
 
 			mailservice.New,
 		),
@@ -73,14 +69,6 @@ func _redis(cfg *config.Config) (*redis.Client, func(), error) {
 	return client, func() {
 		client.Close()
 	}, nil
-}
-
-func _ctxmanager(key gctx.CtxKey) storage.Manager {
-	return man.New(key)
-}
-
-func _ctxconnkey() gctx.CtxKey {
-	return gctx.CtxKeyConnection
 }
 
 func _secretkeyaes(cfg *config.Config) string {

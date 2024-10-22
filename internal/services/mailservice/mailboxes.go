@@ -8,7 +8,7 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (s *MailService) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) {
+func (s *Service) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) {
 
 	fn := "mailservice.Mailboxes"
 	log := slog.With(sl.Method(fn))

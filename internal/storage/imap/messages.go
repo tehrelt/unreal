@@ -1,4 +1,4 @@
-package mail
+package imap
 
 import (
 	"context"
@@ -12,12 +12,12 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (r *MailRepository) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error) {
+func (r *Repository) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error) {
 
 	fn := "mail.Messages"
 	log := r.logger.With(sl.Method(fn))
 
-	c, err := r.ctxman.Get(ctx)
+	c, err := r.ctxman.get(ctx)
 	if err != nil {
 		return nil, err
 	}

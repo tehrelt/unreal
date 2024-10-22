@@ -1,4 +1,4 @@
-package context
+package imap
 
 import (
 	"context"
@@ -10,22 +10,24 @@ import (
 	"github.com/tehrelt/unreal/internal/storage"
 )
 
-type MailContextManager struct {
+var defaultManager = newCtxManager()
+
+type imapCtxManager struct {
 	key gctx.CtxKey
 	l   *slog.Logger
 }
 
-func New(key gctx.CtxKey) *MailContextManager {
-	return &MailContextManager{
-		key: key,
+func newCtxManager() *imapCtxManager {
+	return &imapCtxManager{
+		key: connKey,
 		l: slog.With(
-			sl.Module("MailContextManager"),
-			slog.Any("key", key),
+			sl.Module("imapCtxManager"),
+			slog.Any("key", connKey),
 		),
 	}
 }
 
-func (ctxman *MailContextManager) Set(ctx context.Context, val *client.Client) context.Context {
+func (ctxman *imapCtxManager) set(ctx context.Context, val *client.Client) context.Context {
 	fn := "context.Set"
 	log := ctxman.l.With(sl.Method(fn))
 
@@ -33,7 +35,7 @@ func (ctxman *MailContextManager) Set(ctx context.Context, val *client.Client) c
 	return context.WithValue(ctx, ctxman.key, val)
 }
 
-func (ctxman *MailContextManager) Get(ctx context.Context) (*client.Client, error) {
+func (ctxman *imapCtxManager) get(ctx context.Context) (*client.Client, error) {
 	fn := "context.Get"
 	log := ctxman.l.With(sl.Method(fn))
 

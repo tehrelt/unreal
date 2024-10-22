@@ -12,7 +12,7 @@ const (
 	defaultLimit = 50
 )
 
-func (s *MailService) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error) {
+func (s *Service) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error) {
 	fn := "mailservice.Messages"
 	log := slog.With(sl.Method(fn))
 

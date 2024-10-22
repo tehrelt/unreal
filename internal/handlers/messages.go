@@ -23,7 +23,7 @@ type MessagesResponse struct {
 	Total    int              `json:"total"`
 }
 
-func Messages(ms *mailservice.MailService) echo.HandlerFunc {
+func Messages(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 

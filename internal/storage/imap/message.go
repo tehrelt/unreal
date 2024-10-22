@@ -1,4 +1,4 @@
-package mail
+package imap
 
 import (
 	"bytes"
@@ -18,12 +18,12 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (r *MailRepository) Message(ctx context.Context, mailbox string, num uint32) (*entity.MessageWithBody, error) {
+func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*entity.MessageWithBody, error) {
 
 	fn := "mail.Message"
 	log := slog.With(sl.Method(fn))
 
-	c, err := r.ctxman.Get(ctx)
+	c, err := r.ctxman.get(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (r *MailRepository) Message(ctx context.Context, mailbox string, num uint32
 	return msg, nil
 }
 
-func (r *MailRepository) replaceAttachments(msg *entity.MessageWithBody, num uint32, mailbox string) error {
+func (r *Repository) replaceAttachments(msg *entity.MessageWithBody, num uint32, mailbox string) error {
 	for _, attachment := range msg.Attachments {
 
 		cid := strings.Trim(attachment.ContentId, "<>")

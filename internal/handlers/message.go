@@ -17,7 +17,7 @@ type MessageResponse struct {
 	Mail *entity.MessageWithBody `json:"mail"`
 }
 
-func Message(ms *mailservice.MailService) echo.HandlerFunc {
+func Message(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 

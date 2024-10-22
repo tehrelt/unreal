@@ -1,4 +1,4 @@
-package mail
+package imap
 
 import (
 	"context"
@@ -7,32 +7,33 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/tehrelt/unreal/internal/config"
-	gctx "github.com/tehrelt/unreal/internal/context"
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
-	mctx "github.com/tehrelt/unreal/internal/storage/mail/context"
+	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
-type MailRepository struct {
+var _ mailservice.Repository = (*Repository)(nil)
+
+type Repository struct {
 	cfg    *config.Config
-	ctxman *mctx.MailContextManager
+	ctxman *imapCtxManager
 	logger *slog.Logger
 }
 
-func NewMailRepository(key gctx.CtxKey, cfg *config.Config) *MailRepository {
-	return &MailRepository{
+func NewRepository(cfg *config.Config) *Repository {
+	return &Repository{
 		cfg:    cfg,
-		ctxman: mctx.New(key),
+		ctxman: defaultManager,
 		logger: slog.With(sl.Module("mail.MailRepository")),
 	}
 }
 
-func (r *MailRepository) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) {
+func (r *Repository) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) {
 
 	fn := "mail.Mailboxes"
 	log := r.logger.With(sl.Method(fn))
 
-	conn, err := r.ctxman.Get(ctx)
+	conn, err := r.ctxman.get(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}

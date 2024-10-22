@@ -1,8 +1,8 @@
 package context
 
-type CtxKey int
+type CtxKey string
 
 const (
-	CtxKeyUser CtxKey = iota
-	CtxKeyConnection
+	CtxKeyUser       CtxKey = "user"
+	CtxKeyConnection CtxKey = "connection"
 )

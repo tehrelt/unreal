@@ -11,7 +11,7 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (ms *MailService) findFolderByAttr(_ context.Context, c *client.Client, attribute string) (string, error) {
+func (ms *Service) findFolderByAttr(_ context.Context, c *client.Client, attribute string) (string, error) {
 
 	fn := "mailservice.findFolderByAttr"
 	log := slog.With(sl.Method(fn))

@@ -1,4 +1,4 @@
-package mail
+package imap
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (r *MailRepository) unread(ctx context.Context) (int, error) {
+func (r *Repository) unread(ctx context.Context) (int, error) {
 
 	fn := "mail.unread"
 	log := r.logger.With(sl.Method(fn))
 
-	c, err := r.ctxman.Get(ctx)
+	c, err := r.ctxman.get(ctx)
 	if err != nil {
 		return 0, err
 	}

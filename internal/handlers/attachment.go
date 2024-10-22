@@ -10,7 +10,7 @@ import (
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
-func Attachment(ms *mailservice.MailService) echo.HandlerFunc {
+func Attachment(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 
