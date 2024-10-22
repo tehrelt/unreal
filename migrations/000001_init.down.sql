@@ -10,4 +10,4 @@ drop table if exists "messages";
 
 drop table if exists "profile_pictures";
 
-drop table if exists "user";
+drop table if exists "users";

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/wire"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/lib/aes"
@@ -23,6 +24,7 @@ func New() (*App, func(), error) {
 		newApp,
 		config.New,
 		_redis,
+		_pgxpool,
 
 		wire.NewSet(
 			mredis.NewSessionStorage,
@@ -75,22 +77,17 @@ func _redis(cfg *config.Config) (*redis.Client, func(), error) {
 }
 
 func _pgxpool(cfg *config.Config) (*pgxpool.Pool, func(), error) {
-	host := cfg.Pg.Host
-	port := cfg.Pg.Port
-	user := cfg.Pg.User
-	pass := cfg.Pg.Pass
-	name := cfg.Pg.Name
 
-	cs := fmt.Sprintf(`postgres://%s:%s@%s:%d/%s?sslmode=disable`, user, pass, host, port, name)
-
-	db, err := sqlx.Connect("pgx", cs)
+	ctx := context.Background()
+	cs := cfg.Pg.ConnectionString()
+	db, err := pgxpool.Connect(ctx, cs)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	slog.Debug("connecting to database", slog.String("conn", cs))
+	slog.Debug("connecting to database", slog.String("cs", cs))
 	t := time.Now()
-	if err := db.Ping(); err != nil {
+	if err := db.Ping(ctx); err != nil {
 		slog.Error("failed to connect to database", slog.String("err", err.Error()), slog.String("conn", cs))
 		return nil, func() { db.Close() }, err
 	}
