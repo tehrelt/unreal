@@ -1,6 +1,3 @@
-//go:build wireinject
-// +build wireinject
-
 package app
 
 import (
@@ -15,10 +12,10 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/aes"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
-	"github.com/tehrelt/unreal/internal/storage/imap"
-	"github.com/tehrelt/unreal/internal/storage/manager"
+	"github.com/tehrelt/unreal/internal/storage/mail/imap"
+	"github.com/tehrelt/unreal/internal/storage/mail/manager"
+	"github.com/tehrelt/unreal/internal/storage/mail/smtp"
 	mredis "github.com/tehrelt/unreal/internal/storage/redis"
-	"github.com/tehrelt/unreal/internal/storage/smtp"
 )
 
 func New() (*App, func(), error) {
@@ -75,6 +72,31 @@ func _redis(cfg *config.Config) (*redis.Client, func(), error) {
 	return client, func() {
 		client.Close()
 	}, nil
+}
+
+func _pgxpool(cfg *config.Config) (*pgxpool.Pool, func(), error) {
+	host := cfg.Pg.Host
+	port := cfg.Pg.Port
+	user := cfg.Pg.User
+	pass := cfg.Pg.Pass
+	name := cfg.Pg.Name
+
+	cs := fmt.Sprintf(`postgres://%s:%s@%s:%d/%s?sslmode=disable`, user, pass, host, port, name)
+
+	db, err := sqlx.Connect("pgx", cs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	slog.Debug("connecting to database", slog.String("conn", cs))
+	t := time.Now()
+	if err := db.Ping(); err != nil {
+		slog.Error("failed to connect to database", slog.String("err", err.Error()), slog.String("conn", cs))
+		return nil, func() { db.Close() }, err
+	}
+	slog.Info("connected to database", slog.String("ping", fmt.Sprintf("%2.fs", time.Since(t).Seconds())))
+
+	return db, func() { db.Close() }, nil
 }
 
 func _secretkeyaes(cfg *config.Config) string {

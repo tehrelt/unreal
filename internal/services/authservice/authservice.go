@@ -14,6 +14,20 @@ type SessionStorage interface {
 	Save(ctx context.Context, in *entity.SessionInfo, ttl ...time.Duration) (id string, err error)
 }
 
+type UserProvider interface {
+	Find(ctx context.Context, email string) error
+	ProfilePicture(ctx context.Context, email string) (string, error)
+}
+
+type UserSaver interface {
+	Save(ctx context.Context, in any) error
+}
+
+type UserUpdater interface {
+	Update(ctx context.Context) error
+	UpdateProfilePicture(ctx context.Context) error
+}
+
 type Encryptor interface {
 	Encrypt(in string) (string, error)
 	Decrypt(in string) (string, error)

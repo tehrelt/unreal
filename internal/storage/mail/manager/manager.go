@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/tehrelt/unreal/internal/storage"
-	"github.com/tehrelt/unreal/internal/storage/imap"
-	"github.com/tehrelt/unreal/internal/storage/smtp"
+	"github.com/tehrelt/unreal/internal/storage/mail/imap"
+	"github.com/tehrelt/unreal/internal/storage/mail/smtp"
 )
 
 type Manager struct {

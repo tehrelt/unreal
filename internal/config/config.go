@@ -12,6 +12,19 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
+type Pg struct {
+	Host    string `env:"PG_HOST" env-required:"true"`
+	Port    int    `env:"PG_PORT" env-required:"true"`
+	User    string `env:"PG_USER" env-required:"true"`
+	Pass    string `env:"PG_PASS" env-required:"true"`
+	Name    string `env:"PG_NAME" env-required:"true"`
+	SslMode string `env:"PG_SSL" env-default:"disable"`
+}
+
+func (pg *Pg) ConnectionString() string {
+	return fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=disable", pg.User, pg.Pass, pg.Host, pg.Port, pg.Name)
+}
+
 type Config struct {
 	Env  string `env:"ENV" env-default:"local"`
 	Host string `env:"HOST" env-default:"localhost"`
@@ -36,6 +49,8 @@ type Config struct {
 		Ttl       time.Duration
 		TtlString string `env:"JWT_TTL" env-required:"true" env-default:"10m"`
 	}
+
+	Pg Pg
 
 	Redis struct {
 		Host string `env:"REDIS_HOST" env-required:"true" env-default:"localhost"`

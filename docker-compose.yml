@@ -1,14 +1,30 @@
 services:
   redis:
     image: redis:7.2.4-alpine
-    restart: always
-    ports:
-      - "${REDIS_PORT}:6379"
+    restart: unless-stopped
     env_file:
       - .env
     volumes:
       - redis-data:/data
+    ports:
+      - "${REDIS_PORT}:6379"
+
+  pg:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${PG_NAME}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASS}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - ${PG_PORT}:5432
 
 volumes:
   redis-data:
     name: unreal-redis-data
+  pg-data:
+    name: unreal-pg-data
