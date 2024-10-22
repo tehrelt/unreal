@@ -9,6 +9,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
+	"github.com/tehrelt/unreal/internal/storage"
 	"github.com/tehrelt/unreal/internal/storage/models"
 	"github.com/tehrelt/unreal/internal/storage/pg"
 )
@@ -42,6 +43,8 @@ func (r *Repository) Save(ctx context.Context, in *models.CreateUser) error {
 		var pgerr *pgconn.PgError
 		if ok := errors.As(err, &pgerr); ok {
 			switch pgerr.Code {
+			case "23505":
+				return fmt.Errorf("%s: %w", fn, storage.ErrUserAlreadyExists)
 			default:
 				log.Error("unexpected pg error", slog.String("message", pgerr.Message), slog.String("code", pgerr.Code))
 				return fmt.Errorf("%s: %w", fn, err)
