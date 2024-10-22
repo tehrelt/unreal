@@ -2,10 +2,12 @@ package mailservice
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/dto"
 	"github.com/tehrelt/unreal/internal/entity"
+	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 	"github.com/tehrelt/unreal/internal/storage"
 )
 
@@ -19,6 +21,7 @@ type MailService struct {
 	cfg *config.Config
 	m   storage.Manager
 	r   MailRepository
+	l   *slog.Logger
 }
 
 func New(cfg *config.Config, manager storage.Manager, r MailRepository) *MailService {
@@ -26,5 +29,6 @@ func New(cfg *config.Config, manager storage.Manager, r MailRepository) *MailSer
 		cfg: cfg,
 		m:   manager,
 		r:   r,
+		l:   slog.With(sl.Method("mailservice.MailService")),
 	}
 }

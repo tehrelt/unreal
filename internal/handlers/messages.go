@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"log/slog"
 	"net/url"
 
@@ -30,11 +29,9 @@ func Messages(ms *mailservice.MailService) echo.HandlerFunc {
 
 		var request MessagesRequest
 
-		user := c.Get("user")
-		if user == nil {
-			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{
-				"error": "no user in context",
-			})
+		ctx, err := extractUser(c)
+		if err != nil {
+			return err
 		}
 
 		mailboxescaped := c.Param("mailbox")
@@ -71,20 +68,18 @@ func Messages(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		out,
-			err := ms.Messages(
-			context.WithValue(c.Request().Context(), "user", user),
-			&dto.FetchMessagesDto{
-				Mailbox: mailbox,
-				Limit: func() int {
-					if request.Limit == 0 {
-						return defaultLimit
-					}
-					return request.Limit
-				}(),
-				Page: request.Page,
-			},
-		)
+		in := &dto.FetchMessagesDto{
+			Mailbox: mailbox,
+			Limit: func() int {
+				if request.Limit == 0 {
+					return defaultLimit
+				}
+				return request.Limit
+			}(),
+			Page: request.Page,
+		}
+
+		out, err := ms.Messages(ctx, in)
 		if err != nil {
 			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{
 				"error": err.Error(),

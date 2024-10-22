@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"log/slog"
-
 	"github.com/labstack/echo/v4"
+	"github.com/tehrelt/unreal/internal/context"
 	"github.com/tehrelt/unreal/internal/entity"
 )
 
@@ -12,14 +11,13 @@ func Profile() echo.HandlerFunc {
 		Email string `json:"email"`
 	}
 	return func(c echo.Context) error {
-		u := c.Get("user").(*entity.SessionInfo)
-		if u == nil {
-			slog.Warn("no user in context")
-			return c.JSON(401, map[string]any{
-				"error": "unathorized",
-			})
+
+		ctx, err := extractUser(c)
+		if err != nil {
+			return err
 		}
 
+		u := ctx.Value(context.CtxKeyUser).(*entity.SessionInfo)
 		return c.JSON(200, &response{
 			Email: u.Email,
 		})

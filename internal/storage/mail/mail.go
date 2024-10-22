@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/emersion/go-imap"
+	"github.com/tehrelt/unreal/internal/config"
 	gctx "github.com/tehrelt/unreal/internal/context"
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
@@ -13,12 +14,14 @@ import (
 )
 
 type MailRepository struct {
+	cfg    *config.Config
 	ctxman *mctx.MailContextManager
 	logger *slog.Logger
 }
 
-func NewMailRepository(key gctx.CtxKey) *MailRepository {
+func NewMailRepository(key gctx.CtxKey, cfg *config.Config) *MailRepository {
 	return &MailRepository{
+		cfg:    cfg,
 		ctxman: mctx.New(key),
 		logger: slog.With(sl.Module("mail.MailRepository")),
 	}

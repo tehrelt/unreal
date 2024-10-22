@@ -1,3 +1,6 @@
+//go:build wireinject
+// +build wireinject
+
 package app
 
 import (
@@ -72,8 +75,8 @@ func _redis(cfg *config.Config) (*redis.Client, func(), error) {
 	}, nil
 }
 
-func _ctxmanager() storage.Manager {
-	return man.New(gctx.CtxKeyUser)
+func _ctxmanager(key gctx.CtxKey) storage.Manager {
+	return man.New(key)
 }
 
 func _ctxconnkey() gctx.CtxKey {

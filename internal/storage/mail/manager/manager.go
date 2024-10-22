@@ -33,7 +33,7 @@ func (m *MailManager) Do(ctx context.Context, fn func(ctx context.Context) error
 	}
 	defer cleanup()
 
-	ctx = m.ctxManager.Set(ctx, c)
+	nctx := m.ctxManager.Set(ctx, c)
 
-	return fn(ctx)
+	return fn(nctx)
 }
