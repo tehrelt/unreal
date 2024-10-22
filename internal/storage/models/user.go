@@ -3,6 +3,7 @@ package models
 import "time"
 
 type CreateUser struct {
+	Id    string
 	Email string
 }
 
