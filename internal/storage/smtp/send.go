@@ -13,18 +13,18 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-func (r *Repository) Send(ctx context.Context, req *dto.SendMessageDto) error {
+func (r *Repository) Send(ctx context.Context, req *dto.SendMessageDto) (io.Reader, error) {
 	fn := "smtp.Send"
 	log := r.l.With(sl.Method(fn))
 
 	u, err := r.ctxman.session(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w", fn, err)
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	dialer, err := r.dial(u)
 	if err != nil {
-		return fmt.Errorf("%s: %w", fn, err)
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	m := gomail.NewMessage()
@@ -44,7 +44,7 @@ func (r *Repository) Send(ctx context.Context, req *dto.SendMessageDto) error {
 	builder := new(strings.Builder)
 	if _, err := io.Copy(builder, req.Body); err != nil {
 		log.Error("cannot copy body to buffer", sl.Err(err), slog.Any("body", req.Body))
-		return fmt.Errorf("cannot copy req.Body: %w", err)
+		return nil, fmt.Errorf("cannot copy req.Body: %w", err)
 	}
 	log.Debug("setting body", slog.Int("len", builder.Len()))
 	m.SetBody("text/html", builder.String())
@@ -70,14 +70,14 @@ func (r *Repository) Send(ctx context.Context, req *dto.SendMessageDto) error {
 	buf := new(bytes.Buffer)
 	if _, err := m.WriteTo(buf); err != nil {
 		log.Error("cannot write message to buffer", sl.Err(err), slog.Any("message", m))
-		return fmt.Errorf("cannot write to buf: %w", err)
+		return nil, fmt.Errorf("cannot write to buf: %w", err)
 	}
 
 	log.Debug("sending message", slog.Any("message", m))
 	if err := dialer.DialAndSend(m); err != nil {
 		log.Error("cannot send message", sl.Err(err), slog.Any("message", m))
-		return fmt.Errorf("cannot send: %w", err)
+		return nil, fmt.Errorf("cannot send: %w", err)
 	}
 
-	return nil
+	return buf, nil
 }

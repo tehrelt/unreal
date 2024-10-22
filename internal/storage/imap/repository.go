@@ -17,21 +17,21 @@ var _ mailservice.Repository = (*Repository)(nil)
 type Repository struct {
 	cfg    *config.Config
 	ctxman *imapCtxManager
-	logger *slog.Logger
+	l      *slog.Logger
 }
 
 func NewRepository(cfg *config.Config) *Repository {
 	return &Repository{
 		cfg:    cfg,
 		ctxman: defaultManager,
-		logger: slog.With(sl.Module("mail.MailRepository")),
+		l:      slog.With(sl.Module("mail.MailRepository")),
 	}
 }
 
 func (r *Repository) Mailboxes(ctx context.Context) ([]*entity.Mailbox, error) {
 
 	fn := "mail.Mailboxes"
-	log := r.logger.With(sl.Method(fn))
+	log := r.l.With(sl.Method(fn))
 
 	conn, err := r.ctxman.get(ctx)
 	if err != nil {

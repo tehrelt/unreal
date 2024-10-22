@@ -11,7 +11,7 @@ import (
 func (r *Repository) unread(ctx context.Context) (int, error) {
 
 	fn := "mail.unread"
-	log := r.logger.With(sl.Method(fn))
+	log := r.l.With(sl.Method(fn))
 
 	c, err := r.ctxman.get(ctx)
 	if err != nil {

@@ -15,7 +15,7 @@ import (
 func (r *Repository) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error) {
 
 	fn := "mail.Messages"
-	log := r.logger.With(sl.Method(fn))
+	log := r.l.With(sl.Method(fn))
 
 	c, err := r.ctxman.get(ctx)
 	if err != nil {

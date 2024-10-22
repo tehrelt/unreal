@@ -51,7 +51,7 @@ func Attachment(ms *mailservice.Service) echo.HandlerFunc {
 			})
 		}
 
-		reader, ct, err := ms.GetAttachment(ctx, mailbox, uint32(inum), filename)
+		reader, ct, err := ms.Attachment(ctx, mailbox, uint32(inum), filename)
 		if err != nil {
 			slog.Error("failed to get mail", sl.Err(err))
 			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{
