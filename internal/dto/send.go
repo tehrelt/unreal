@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 )
 
@@ -20,7 +21,9 @@ func (m *MailRecord) String() string {
 		return m.Email
 	}
 
-	return fmt.Sprintf("%s <%s>", *m.Name, m.Email)
+	name := mime.QEncoding.Encode("UTF-8", *m.Name)
+
+	return fmt.Sprintf("%s <%s>", name, m.Email)
 }
 
 type SendMessageDto struct {
