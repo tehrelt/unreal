@@ -21,7 +21,7 @@ func Message(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 
-		ctx, err := extractUser(c)
+		ctx, _, err := extractUser(c)
 		if err != nil {
 			return err
 		}

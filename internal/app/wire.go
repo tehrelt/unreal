@@ -30,33 +30,32 @@ func New() (*App, func(), error) {
 		_redis,
 		_pgxpool,
 
-		wire.NewSet(
-			mredis.NewSessionStorage,
-			wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
+		mredis.NewSessionStorage,
+		usersrepository.New,
 
-			usersrepository.New,
-			wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
-			wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
-			wire.Bind(new(authservice.UserUpdater), new(*usersrepository.Repository)),
+		wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
+		wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
+		wire.Bind(new(authservice.UserUpdater), new(*usersrepository.Repository)),
 
-			_secretkeyaes,
-			aes.NewAesEncryptor,
-			wire.Bind(new(authservice.Encryptor), new(*aes.AesEncryptor)),
+		wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
 
-			authservice.New,
-		),
+		_secretkeyaes,
+		aes.NewAesEncryptor,
+		wire.Bind(new(authservice.Encryptor), new(*aes.AesEncryptor)),
 
-		wire.NewSet(
-			imap.NewRepository,
-			wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
+		authservice.New,
 
-			smtp.NewRepository,
-			wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
+		wire.Bind(new(mailservice.UserProvider), new(*usersrepository.Repository)),
 
-			manager.NewManager,
+		imap.NewRepository,
+		wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
 
-			mailservice.New,
-		),
+		smtp.NewRepository,
+		wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
+
+		manager.NewManager,
+
+		mailservice.New,
 	))
 }
 

@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/tehrelt/unreal/internal/context"
-	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 )
 
@@ -19,11 +17,10 @@ func Profile(as *authservice.AuthService) echo.HandlerFunc {
 	}
 	return func(c echo.Context) error {
 
-		ctx, err := extractUser(c)
+		ctx, u, err := extractUser(c)
 		if err != nil {
 			return err
 		}
-		u := ctx.Value(context.CtxKeyUser).(*entity.SessionInfo)
 
 		user, err := as.Profile(ctx, u.Email)
 		if err != nil {

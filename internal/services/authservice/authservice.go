@@ -17,7 +17,6 @@ type SessionStorage interface {
 
 type UserProvider interface {
 	Find(ctx context.Context, email string) (*models.User, error)
-	// ProfilePicture(ctx context.Context, email string) (string, error)
 }
 
 type UserSaver interface {

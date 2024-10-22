@@ -10,6 +10,7 @@ import (
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 	"github.com/tehrelt/unreal/internal/storage"
+	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
 type Repository interface {
@@ -24,20 +25,26 @@ type Sender interface {
 	Send(ctx context.Context, req *dto.SendMessageDto) (io.Reader, error)
 }
 
-type Service struct {
-	cfg    *config.Config
-	m      storage.Manager
-	r      Repository
-	l      *slog.Logger
-	sender Sender
+type UserProvider interface {
+	Find(ctx context.Context, email string) (*models.User, error)
 }
 
-func New(cfg *config.Config, manager storage.Manager, r Repository, sender Sender) *Service {
+type Service struct {
+	cfg          *config.Config
+	m            storage.Manager
+	r            Repository
+	l            *slog.Logger
+	sender       Sender
+	userProvider UserProvider
+}
+
+func New(cfg *config.Config, manager storage.Manager, r Repository, sender Sender, userProvider UserProvider) *Service {
 	return &Service{
-		cfg:    cfg,
-		m:      manager,
-		r:      r,
-		l:      slog.With(sl.Method("mailservice.MailService")),
-		sender: sender,
+		cfg:          cfg,
+		m:            manager,
+		r:            r,
+		l:            slog.With(sl.Method("mailservice.MailService")),
+		sender:       sender,
+		userProvider: userProvider,
 	}
 }

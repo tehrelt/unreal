@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/samber/lo"
 	"github.com/tehrelt/unreal/internal/dto"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
@@ -13,7 +14,7 @@ func SendMail(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 
-		ctx, err := extractUser(c)
+		ctx, u, err := extractUser(c)
 		if err != nil {
 			return err
 		}
@@ -41,7 +42,10 @@ func SendMail(ms *mailservice.Service) echo.HandlerFunc {
 		)
 
 		req := &dto.SendMessageDto{
-			To:          to,
+			From: &dto.MailRecord{Email: u.Email},
+			To: lo.Map(to, func(email string, _ int) *dto.MailRecord {
+				return &dto.MailRecord{Email: email}
+			}),
 			Subject:     subject,
 			Body:        body,
 			Attachments: attachments,

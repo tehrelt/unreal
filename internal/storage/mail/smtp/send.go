@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/tehrelt/unreal/internal/dto"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 	"gopkg.in/gomail.v2"
@@ -29,12 +30,12 @@ func (r *Repository) Send(ctx context.Context, req *dto.SendMessageDto) (io.Read
 
 	m := gomail.NewMessage()
 
-	log.Debug("setting from", slog.String("from", u.Email))
-	m.SetHeader("From", u.Email)
+	log.Debug("setting from", slog.String("from", req.From.String()))
+	m.SetHeader("From", req.From.String())
 
 	// To
 	log.Debug("setting to", slog.Any("to", req.To))
-	m.SetHeader("To", req.To...)
+	m.SetHeader("To", lo.Map(req.To, func(r *dto.MailRecord, _ int) string { return r.String() })...)
 
 	// Subject
 	log.Debug("setting subject", slog.String("subject", req.Subject))
