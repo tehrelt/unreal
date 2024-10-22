@@ -1,3 +1,6 @@
+//go:build wireinject
+// +build wireinject
+
 package app
 
 import (
@@ -16,6 +19,7 @@ import (
 	"github.com/tehrelt/unreal/internal/storage/mail/imap"
 	"github.com/tehrelt/unreal/internal/storage/mail/manager"
 	"github.com/tehrelt/unreal/internal/storage/mail/smtp"
+	usersrepository "github.com/tehrelt/unreal/internal/storage/pg/users"
 	mredis "github.com/tehrelt/unreal/internal/storage/redis"
 )
 
@@ -29,6 +33,10 @@ func New() (*App, func(), error) {
 		wire.NewSet(
 			mredis.NewSessionStorage,
 			wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
+
+			usersrepository.New,
+			wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
+			wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
 
 			_secretkeyaes,
 			aes.NewAesEncryptor,

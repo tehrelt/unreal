@@ -9,3 +9,9 @@ type Connection struct {
 	Host string `json:"host"`
 	Port int    `json:"port"`
 }
+
+type User struct {
+	Email   string
+	Name    *string
+	Picture *string
+}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/entity"
+	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
 type SessionStorage interface {
@@ -15,12 +16,12 @@ type SessionStorage interface {
 }
 
 type UserProvider interface {
-	Find(ctx context.Context, email string) error
-	ProfilePicture(ctx context.Context, email string) (string, error)
+	Find(ctx context.Context, email string) (*models.User, error)
+	// ProfilePicture(ctx context.Context, email string) (string, error)
 }
 
 type UserSaver interface {
-	Save(ctx context.Context, in any) error
+	Save(ctx context.Context, in *models.CreateUser) error
 }
 
 type UserUpdater interface {
@@ -34,17 +35,21 @@ type Encryptor interface {
 }
 
 type AuthService struct {
-	cfg       *config.Config
-	logger    *slog.Logger
-	sessions  SessionStorage
-	encryptor Encryptor
+	cfg          *config.Config
+	logger       *slog.Logger
+	sessions     SessionStorage
+	encryptor    Encryptor
+	userProvider UserProvider
+	userSaver    UserSaver
 }
 
-func New(cfg *config.Config, sessions SessionStorage, encryptor Encryptor) *AuthService {
+func New(cfg *config.Config, sessions SessionStorage, encryptor Encryptor, userProvider UserProvider, userSaver UserSaver) *AuthService {
 	return &AuthService{
-		cfg:       cfg,
-		sessions:  sessions,
-		encryptor: encryptor,
-		logger:    slog.Default().With(slog.String("struct", "AuthService")),
+		cfg:          cfg,
+		sessions:     sessions,
+		encryptor:    encryptor,
+		logger:       slog.Default().With(slog.String("struct", "AuthService")),
+		userProvider: userProvider,
+		userSaver:    userSaver,
 	}
 }

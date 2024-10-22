@@ -43,7 +43,7 @@ func (a *App) initRoutes() {
 	reqauth := mw.RequireAuth(a.as, a.config)
 
 	a.app.POST("/login", handlers.LoginHandler(a.as))
-	a.app.GET("/me", handlers.Profile(), reqauth)
+	a.app.GET("/me", handlers.Profile(a.as), reqauth)
 	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), reqauth)
 
 	mailbox := a.app.Group("/:mailbox", reqauth)

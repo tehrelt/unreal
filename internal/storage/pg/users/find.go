@@ -23,9 +23,9 @@ func (r *Repository) Find(ctx context.Context, email string) (*models.User, erro
 	log.Debug("find user by email", slog.String("email", email))
 
 	sql, args, err := sq.
-		Select("u.id, u.email, u.name, u.created_at, u.updated_at, pfp.profile_picture").
+		Select("u.email, u.name, u.created_at, u.updated_at, pfp.profile_picture").
 		From(fmt.Sprintf("%s u", pg.UserTable)).
-		LeftJoin(fmt.Sprintf("%s pfp on u.id = pfp.user_id", pg.ProfilePictureTable)).
+		LeftJoin(fmt.Sprintf("%s pfp on u.email = pfp.email", pg.ProfilePictureTable)).
 		Where(sq.Eq{"email": email}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
@@ -45,7 +45,7 @@ func (r *Repository) Find(ctx context.Context, email string) (*models.User, erro
 	qlog.Debug("querying user")
 
 	var u models.User
-	if err := connection.QueryRow(ctx, sql, args...).Scan(&u.Id, &u.Email, &u.Name, &u.CreatedAt, &u.UpdatedAt, &u.ProfilePicture); err != nil {
+	if err := connection.QueryRow(ctx, sql, args...).Scan(&u.Email, &u.Name, &u.CreatedAt, &u.UpdatedAt, &u.ProfilePicture); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			log.Debug("user not found", slog.String("email", email))
 			return nil, fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)

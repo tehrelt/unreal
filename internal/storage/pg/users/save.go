@@ -26,8 +26,8 @@ func (r *Repository) Save(ctx context.Context, in *models.CreateUser) error {
 
 	sql, args, err := sq.
 		Insert(pg.UserTable).
-		Columns("id", "email").
-		Values(in.Id, in.Email).
+		Columns("email").
+		Values(in.Email).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
