@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"log/slog"
 
 	"github.com/labstack/echo/v4"
@@ -18,13 +17,13 @@ type MessageResponse struct {
 	Mail *entity.MessageWithBody `json:"mail"`
 }
 
-func Message(ms *mailservice.MailService) echo.HandlerFunc {
+func Message(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 
-		user := c.Get(string("user"))
-		if user == nil {
-			return echo.NewHTTPError(echo.ErrInternalServerError.Code, "no user in echo context")
+		ctx, err := extractUser(c)
+		if err != nil {
+			return err
 		}
 
 		var request MessageRequest
@@ -41,7 +40,7 @@ func Message(ms *mailservice.MailService) echo.HandlerFunc {
 		}
 
 		mail, err := ms.Message(
-			context.WithValue(c.Request().Context(), "user", user),
+			ctx,
 			request.Mailbox,
 			uint32(request.Mailnum),
 		)

@@ -1,37 +1,27 @@
 package handlers
 
 import (
-	"context"
 	"io"
 	"log/slog"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
-func Attachment(ms *mailservice.MailService) echo.HandlerFunc {
-
-	type response struct {
-		Mail *entity.MessageWithBody `json:"mail"`
-	}
+func Attachment(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 
-		user := c.Get(string("user"))
-		if user == nil {
-			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{
-				"error": "no user in context",
-			})
+		ctx, err := extractUser(c)
+		if err != nil {
+			return err
 		}
 
 		mailbox := c.QueryParam("mailbox")
 		if mailbox == "" {
-			return c.JSON(echo.ErrBadRequest.Code, map[string]any{
-				"error": "emptry mailbox",
-			})
+			return echo.NewHTTPError(400, "no mailbox")
 		}
 
 		num := c.QueryParam("mailnum")
@@ -61,7 +51,7 @@ func Attachment(ms *mailservice.MailService) echo.HandlerFunc {
 			})
 		}
 
-		reader, ct, err := ms.GetAttachment(context.WithValue(c.Request().Context(), "user", user), mailbox, uint32(inum), filename)
+		reader, ct, err := ms.Attachment(ctx, mailbox, uint32(inum), filename)
 		if err != nil {
 			slog.Error("failed to get mail", sl.Err(err))
 			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{

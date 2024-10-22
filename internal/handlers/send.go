@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"log/slog"
 	"strings"
 
@@ -10,14 +9,13 @@ import (
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
-func SendMail(ms *mailservice.MailService) echo.HandlerFunc {
+func SendMail(ms *mailservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
-		user := c.Get("user")
-		if user == nil {
-			return c.JSON(echo.ErrInternalServerError.Code, map[string]any{
-				"error": "no user in context",
-			})
+
+		ctx, err := extractUser(c)
+		if err != nil {
+			return err
 		}
 
 		form, err := c.MultipartForm()
@@ -26,8 +24,6 @@ func SendMail(ms *mailservice.MailService) echo.HandlerFunc {
 				"error": err.Error(),
 			})
 		}
-
-		ctx := c.Request().Context()
 
 		to := form.Value["to"]
 		subject := form.Value["subject"][0]
@@ -51,10 +47,8 @@ func SendMail(ms *mailservice.MailService) echo.HandlerFunc {
 			Attachments: attachments,
 		}
 
-		if err := ms.Send(context.WithValue(ctx, "user", user), req); err != nil {
-			return c.JSON(500, map[string]any{
-				"error": err.Error(),
-			})
+		if err := ms.Send(ctx, req); err != nil {
+			return echo.NewHTTPError(500, err.Error())
 		}
 
 		return nil

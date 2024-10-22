@@ -23,7 +23,7 @@ func RequireAuth(as *authservice.AuthService, cfg *config.Config) echo.Middlewar
 			cookieToken, err := c.Cookie("token")
 			if cookieToken != nil {
 				token = cookieToken.Value
-				slog.Debug("get token from cookie", slog.String("token", token))
+				slog.Debug("get token from cookie")
 			} else {
 				authHeader := c.Request().Header.Get("Authorization")
 				if authHeader == "" {
@@ -37,8 +37,6 @@ func RequireAuth(as *authservice.AuthService, cfg *config.Config) echo.Middlewar
 
 				token = tok[1]
 			}
-
-			slog.Debug("get token", slog.String("token", token))
 
 			user, err := as.Authenticate(ctx, token)
 			if err != nil {

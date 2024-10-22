@@ -1,4 +1,4 @@
-package mailservice
+package imap
 
 import (
 	"context"
@@ -6,15 +6,19 @@ import (
 	"log/slog"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
 	"github.com/tehrelt/unreal/internal/domain"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 )
 
-func (ms *MailService) findFolderByAttr(_ context.Context, c *client.Client, attribute string) (string, error) {
+func (r *Repository) findFolderByAttr(ctx context.Context, attribute string) (string, error) {
 
-	fn := "mailservice.findFolderByAttr"
+	fn := "imap.findFolderByAttr"
 	log := slog.With(sl.Method(fn))
+
+	c, err := r.ctxman.get(ctx)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", fn, err)
+	}
 
 	mailboxes := make(chan *imap.MailboxInfo, 10)
 	done := make(chan error, 1)
@@ -27,7 +31,7 @@ func (ms *MailService) findFolderByAttr(_ context.Context, c *client.Client, att
 
 	for m := range mailboxes {
 		slog.Debug(
-			"comapring mailbox to attribute",
+			"comparing mailbox to attribute",
 			slog.String("mailbox", m.Name),
 			slog.String("attribute", attribute),
 		)

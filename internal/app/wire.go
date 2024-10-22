@@ -15,7 +15,10 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/aes"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
+	"github.com/tehrelt/unreal/internal/storage/imap"
+	"github.com/tehrelt/unreal/internal/storage/manager"
 	mredis "github.com/tehrelt/unreal/internal/storage/redis"
+	"github.com/tehrelt/unreal/internal/storage/smtp"
 )
 
 func New() (*App, func(), error) {
@@ -35,7 +38,17 @@ func New() (*App, func(), error) {
 			authservice.New,
 		),
 
-		mailservice.New,
+		wire.NewSet(
+			imap.NewRepository,
+			wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
+
+			smtp.NewRepository,
+			wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
+
+			manager.NewManager,
+
+			mailservice.New,
+		),
 	))
 }
 
