@@ -1,5 +1,7 @@
 package entity
 
+import "io"
+
 type Credentials struct {
 	Email    string
 	Password string
@@ -14,4 +16,10 @@ type User struct {
 	Email   string
 	Name    *string
 	Picture *string
+}
+
+type UpdateUser struct {
+	Email   string
+	Name    *string
+	Picture io.Reader
 }

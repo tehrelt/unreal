@@ -37,6 +37,7 @@ func New() (*App, func(), error) {
 			usersrepository.New,
 			wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
 			wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
+			wire.Bind(new(authservice.UserUpdater), new(*usersrepository.Repository)),
 
 			_secretkeyaes,
 			aes.NewAesEncryptor,

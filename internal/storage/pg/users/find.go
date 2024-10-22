@@ -26,7 +26,7 @@ func (r *Repository) Find(ctx context.Context, email string) (*models.User, erro
 		Select("u.email, u.name, u.created_at, u.updated_at, pfp.profile_picture").
 		From(fmt.Sprintf("%s u", pg.UserTable)).
 		LeftJoin(fmt.Sprintf("%s pfp on u.email = pfp.email", pg.ProfilePictureTable)).
-		Where(sq.Eq{"email": email}).
+		Where(sq.Eq{"u.email": email}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

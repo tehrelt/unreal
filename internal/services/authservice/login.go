@@ -26,7 +26,9 @@ func (s *AuthService) Login(ctx context.Context, in *dto.LoginDto) (*dto.LoginRe
 		return nil, fmt.Errorf("unable to encrypt password: %w", err)
 	}
 
-	out := new(dto.LoginResult)
+	out := &dto.LoginResult{
+		FirstLogon: true,
+	}
 
 	info := &entity.SessionInfo{
 		Email:    in.Email,
@@ -44,7 +46,7 @@ func (s *AuthService) Login(ctx context.Context, in *dto.LoginDto) (*dto.LoginRe
 		if !errors.Is(err, storage.ErrUserAlreadyExists) {
 			return nil, fmt.Errorf("unable to save user: %w", err)
 		}
-		out.FirstLogon = true
+		out.FirstLogon = false
 	}
 
 	slog.Debug("creating session", slog.Any("session", info))

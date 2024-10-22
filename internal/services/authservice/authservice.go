@@ -25,8 +25,7 @@ type UserSaver interface {
 }
 
 type UserUpdater interface {
-	Update(ctx context.Context) error
-	UpdateProfilePicture(ctx context.Context) error
+	Update(ctx context.Context, in *models.UpdateUser) error
 }
 
 type Encryptor interface {
@@ -41,9 +40,10 @@ type AuthService struct {
 	encryptor    Encryptor
 	userProvider UserProvider
 	userSaver    UserSaver
+	userUpdater  UserUpdater
 }
 
-func New(cfg *config.Config, sessions SessionStorage, encryptor Encryptor, userProvider UserProvider, userSaver UserSaver) *AuthService {
+func New(cfg *config.Config, sessions SessionStorage, encryptor Encryptor, userProvider UserProvider, userSaver UserSaver, userUpdater UserUpdater) *AuthService {
 	return &AuthService{
 		cfg:          cfg,
 		sessions:     sessions,
@@ -51,5 +51,6 @@ func New(cfg *config.Config, sessions SessionStorage, encryptor Encryptor, userP
 		logger:       slog.Default().With(slog.String("struct", "AuthService")),
 		userProvider: userProvider,
 		userSaver:    userSaver,
+		userUpdater:  userUpdater,
 	}
 }

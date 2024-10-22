@@ -8,7 +8,7 @@ create table if not exists "users" (
 create index "idx_email_btree" on "users" (email);
 
 create table if not exists "profile_pictures" (
-  email uuid references "users" (email) primary key,
+  email varchar references "users" (email) primary key,
   profile_picture varchar not null,
   created_at timestamp default now(),
   updated_at timestamp
