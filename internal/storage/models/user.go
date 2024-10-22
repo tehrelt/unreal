@@ -7,6 +7,12 @@ type CreateUser struct {
 	Email string
 }
 
+type UpdateUser struct {
+	Email          string
+	Name           *string
+	ProfilePicture *string
+}
+
 type User struct {
 	Id             string
 	Email          string
