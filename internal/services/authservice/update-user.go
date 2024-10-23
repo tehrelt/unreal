@@ -11,7 +11,7 @@ import (
 	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
-func (s *AuthService) UpdateUser(ctx context.Context, in *entity.UpdateUser) error {
+func (s *Service) UpdateUser(ctx context.Context, in *entity.UpdateUser) error {
 	fn := "authservice.UpdateUser"
 	log := s.logger.With(sl.Method(fn))
 

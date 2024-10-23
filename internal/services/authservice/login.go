@@ -13,7 +13,7 @@ import (
 	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
-func (s *AuthService) Login(ctx context.Context, in *dto.LoginDto) (*dto.LoginResult, error) {
+func (s *Service) Login(ctx context.Context, in *dto.LoginDto) (*dto.LoginResult, error) {
 
 	_, cleanup, err := imap.Dial(in.Email, in.Password, in.Imap.Host, in.Imap.Port)
 	if err != nil {

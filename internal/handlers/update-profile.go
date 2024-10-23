@@ -12,7 +12,7 @@ type UpdateProfileRequest struct {
 	Name *string `json:"name,omitempty" form:"name"`
 }
 
-func UpdateProfile(s *authservice.AuthService) echo.HandlerFunc {
+func UpdateProfile(s *authservice.Service) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req UpdateProfileRequest
 

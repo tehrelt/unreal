@@ -40,7 +40,7 @@ type Encryptor interface {
 	Decrypt(in string) (string, error)
 }
 
-type AuthService struct {
+type Service struct {
 	cfg          *config.Config
 	logger       *slog.Logger
 	sessions     SessionStorage
@@ -61,8 +61,8 @@ func New(
 	userUpdater UserUpdater,
 	fileProvider FileProvider,
 	fileUploader FileUploader,
-) *AuthService {
-	return &AuthService{
+) *Service {
+	return &Service{
 		cfg:          cfg,
 		logger:       slog.Default().With(slog.String("struct", "AuthService")),
 		sessions:     sessions,

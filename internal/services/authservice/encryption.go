@@ -1,6 +1,6 @@
 package authservice
 
-func (as *AuthService) encrypt(in string) (string, error) {
+func (as *Service) encrypt(in string) (string, error) {
 	out, err := as.encryptor.Encrypt(in)
 	if err != nil {
 		return "", err
@@ -8,7 +8,7 @@ func (as *AuthService) encrypt(in string) (string, error) {
 
 	return out, nil
 }
-func (as *AuthService) decrypt(in string) (string, error) {
+func (as *Service) decrypt(in string) (string, error) {
 	out, err := as.encryptor.Decrypt(in)
 	if err != nil {
 		return "", err

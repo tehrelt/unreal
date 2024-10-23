@@ -11,7 +11,7 @@ import (
 	"github.com/tehrelt/unreal/internal/services/authservice"
 )
 
-func File(svc *authservice.AuthService) echo.HandlerFunc {
+func File(svc *authservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 

@@ -11,7 +11,7 @@ type ProfileResponse struct {
 	Picture *string `json:"picture"`
 }
 
-func Profile(as *authservice.AuthService) echo.HandlerFunc {
+func Profile(as *authservice.Service) echo.HandlerFunc {
 	type response struct {
 		Email string `json:"email"`
 	}

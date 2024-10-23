@@ -10,7 +10,7 @@ import (
 	"github.com/tehrelt/unreal/internal/services"
 )
 
-func (s *AuthService) Profile(ctx context.Context, email string) (*entity.User, error) {
+func (s *Service) Profile(ctx context.Context, email string) (*entity.User, error) {
 	fn := "authservice.Profile"
 	log := s.logger.With(sl.Method(fn))
 

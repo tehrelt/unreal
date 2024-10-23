@@ -15,7 +15,7 @@ type LoginResponse struct {
 	FirstLogon bool   `json:"firstLogon"`
 }
 
-func LoginHandler(as *authservice.AuthService) echo.HandlerFunc {
+func LoginHandler(as *authservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 

@@ -11,6 +11,7 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/httpvalidator"
 	mw "github.com/tehrelt/unreal/internal/middleware"
 	"github.com/tehrelt/unreal/internal/services/authservice"
+	"github.com/tehrelt/unreal/internal/services/hostservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
 )
 
@@ -18,16 +19,18 @@ type App struct {
 	app    *echo.Echo
 	config *config.Config
 
-	as *authservice.AuthService
+	as *authservice.Service
 	ms *mailservice.Service
+	hs *hostservice.Service
 }
 
-func newApp(cfg *config.Config, as *authservice.AuthService, ms *mailservice.Service) *App {
+func newApp(cfg *config.Config, as *authservice.Service, ms *mailservice.Service, hs *hostservice.Service) *App {
 	return &App{
 		app:    echo.New(),
 		config: cfg,
 		as:     as,
 		ms:     ms,
+		hs:     hs,
 	}
 }
 
@@ -56,6 +59,9 @@ func (a *App) initRoutes() {
 
 	a.app.GET("/attachment/:filename", handlers.Attachment(a.ms), reqauth)
 	a.app.POST("/send", handlers.SendMail(a.ms), reqauth)
+
+	hosts := a.app.Group("/hosts")
+	hosts.POST("/", handlers.AddHost(a.hs))
 }
 
 func (a *App) Run() {
