@@ -46,8 +46,6 @@ func (r *Repository) Send(ctx context.Context, req *dto.SendMessageDto) (io.Read
 
 	if req.DoEncryiption {
 		m.SetHeader("X-Unreal-Encryption", "true")
-	} else {
-		m.SetHeader("X-Unreal-Encryption", "false")
 	}
 
 	if _, err := io.Copy(builder, req.Body); err != nil {

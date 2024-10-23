@@ -32,7 +32,6 @@ func New() (*App, func(), error) {
 		config.New,
 		_redis,
 		_pgxpool,
-		_secretkeyaes,
 
 		// redis
 		mredis.NewSessionStorage,
@@ -48,8 +47,10 @@ func New() (*App, func(), error) {
 		imap.NewRepository,
 		smtp.NewRepository,
 
-		// aes encryptor
-		aes.NewAesEncryptor,
+		wire.NewSet(
+			_secretkeyaes,
+			aes.NewStringCipher,
+		),
 
 		wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
 		wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
@@ -57,7 +58,7 @@ func New() (*App, func(), error) {
 		wire.Bind(new(authservice.FileProvider), new(*fs.FileStorage)),
 		wire.Bind(new(authservice.FileUploader), new(*fs.FileStorage)),
 		wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
-		wire.Bind(new(authservice.Encryptor), new(*aes.AesEncryptor)),
+		wire.Bind(new(authservice.Encryptor), new(*aes.StringCipher)),
 
 		wire.Bind(new(mailservice.UserProvider), new(*usersrepository.Repository)),
 		wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
@@ -120,6 +121,6 @@ func _pgxpool(cfg *config.Config) (*pgxpool.Pool, func(), error) {
 	return db, func() { db.Close() }, nil
 }
 
-func _secretkeyaes(cfg *config.Config) string {
-	return cfg.AES.Secret
+func _secretkeyaes(cfg *config.Config) []byte {
+	return []byte(cfg.AES.Secret)
 }

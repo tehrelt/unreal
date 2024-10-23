@@ -4,58 +4,57 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"io"
-	"log/slog"
 )
 
 type AesEncryptor struct {
-	secretkey string
+	secretkey []byte
 }
 
-func NewAesEncryptor(secretkey string) *AesEncryptor {
+func NewAesEncryptor(secretkey []byte) *AesEncryptor {
 	return &AesEncryptor{secretkey: secretkey}
 }
 
-func (e *AesEncryptor) Encrypt(plaintext string) (string, error) {
+func (e *AesEncryptor) Encrypt(plaintext []byte) ([]byte, error) {
 
-	slog.Debug("encrypting", slog.String("secretkey", e.secretkey))
-	key := []byte(e.secretkey)
-	text := []byte(plaintext)
+	fn := "aes.Encrypt"
+	// log := slog.With(sl.Method(fn))
+
+	key := e.secretkey
+	text := plaintext
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", fmt.Errorf("aes.NewCipher: %v", err)
+		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
 
 	ciphertext := make([]byte, aes.BlockSize+len(text))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
 
 	stream := cipher.NewCFBEncrypter(block, iv)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], text)
 
-	return base64.URLEncoding.EncodeToString(ciphertext), nil
+	return ciphertext, nil
 }
 
-func (e *AesEncryptor) Decrypt(toDecrypt string) (string, error) {
+func (e *AesEncryptor) Decrypt(toDecrypt []byte) ([]byte, error) {
+
+	fn := "aes.Decrypt"
 
 	key := []byte(e.secretkey)
-	ciphertext, err := base64.URLEncoding.DecodeString(toDecrypt)
-	if err != nil {
-		return "", fmt.Errorf("base64.URLEncoding.DecodeString: %v", err)
-	}
+	ciphertext := toDecrypt
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", fmt.Errorf("aes.NewCipher: %v", err)
+		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		return "", fmt.Errorf("ciphertext too short")
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
@@ -63,5 +62,5 @@ func (e *AesEncryptor) Decrypt(toDecrypt string) (string, error) {
 	stream := cipher.NewCFBDecrypter(block, iv)
 	stream.XORKeyStream(ciphertext, ciphertext)
 
-	return string(ciphertext), nil
+	return ciphertext, nil
 }

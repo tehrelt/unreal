@@ -33,6 +33,16 @@ type KnownHostProvider interface {
 	Find(ctx context.Context, host string) (string, error)
 }
 
+type Vault interface {
+	Insert(ctx context.Context, in *models.VaultRecord) error
+	Find(ctx context.Context, messageId string) (string, error)
+}
+
+type KeyCipher interface {
+	Encrypt(io.Reader) (io.Reader, error)
+	Decrypt(io.Reader) (io.Reader, error)
+}
+
 type Service struct {
 	cfg          *config.Config
 	m            storage.Manager
@@ -41,6 +51,8 @@ type Service struct {
 	sender       Sender
 	userProvider UserProvider
 	hostProvider KnownHostProvider
+	vault        Vault
+	keyCipher    KeyCipher
 }
 
 func New(cfg *config.Config, manager storage.Manager, r Repository, sender Sender, userProvider UserProvider, hostProvider KnownHostProvider) *Service {
