@@ -38,7 +38,7 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 	seqSet := new(imap.SeqSet)
 	seqSet.AddNum(num)
 
-	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchRFC822}
+	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchRFC822, imap.FetchRFC822Header}
 
 	msg := new(entity.MessageWithBody)
 	messages := make(chan *imap.Message, 10)
@@ -89,6 +89,8 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 			return nil, fmt.Errorf("failed to create reader: %v", err)
 		}
 
+		log.Debug("headers", slog.Any("headers", mr.Header.Map()))
+
 		for {
 			part, err := mr.NextPart()
 
@@ -103,6 +105,9 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 			}
 
 			switch h := part.Header.(type) {
+			case *mail.Header:
+				log.Debug("read header", slog.Any("headers", h))
+
 			case *mail.InlineHeader:
 
 				ct, _, err := h.ContentType()
@@ -149,6 +154,8 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 					Filename:    filename,
 					ContentType: ct,
 				})
+			default:
+				log.Debug("unknown header type", slog.String("type", fmt.Sprintf("%T", h)), slog.Any("header", h))
 			}
 		}
 	}

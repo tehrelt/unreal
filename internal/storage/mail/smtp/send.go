@@ -43,6 +43,13 @@ func (r *Repository) Send(ctx context.Context, req *dto.SendMessageDto) (io.Read
 
 	// Body
 	builder := new(strings.Builder)
+
+	if req.DoEncryiption {
+		m.SetHeader("X-Unreal-Encryption", "true")
+	} else {
+		m.SetHeader("X-Unreal-Encryption", "false")
+	}
+
 	if _, err := io.Copy(builder, req.Body); err != nil {
 		log.Error("cannot copy body to buffer", sl.Err(err), slog.Any("body", req.Body))
 		return nil, fmt.Errorf("cannot copy req.Body: %w", err)
