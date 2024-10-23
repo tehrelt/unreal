@@ -7,11 +7,8 @@ import (
 
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
+	"github.com/tehrelt/unreal/internal/services"
 )
-
-func (s *AuthService) getPictureLink(filename string) string {
-	return fmt.Sprintf("%s/file/%s", s.cfg.Host(), filename)
-}
 
 func (s *AuthService) Profile(ctx context.Context, email string) (*entity.User, error) {
 	fn := "authservice.Profile"
@@ -29,7 +26,7 @@ func (s *AuthService) Profile(ctx context.Context, email string) (*entity.User, 
 	}
 
 	if user.ProfilePicture != nil {
-		link := s.getPictureLink(*user.ProfilePicture)
+		link := services.GetPictureLink(s.cfg.Host(), *user.ProfilePicture)
 		out.Picture = &link
 	}
 
