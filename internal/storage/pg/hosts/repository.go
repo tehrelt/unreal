@@ -60,7 +60,7 @@ func (r *Repository) Find(ctx context.Context, host string) (string, error) {
 	if err := connection.QueryRow(ctx, sql, args...).Scan(&picture); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			log.Debug("host not found", slog.String("host", host))
-			return "", fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+			return "", fmt.Errorf("%s: %w", fn, storage.ErrHostNotFound)
 		}
 		var pgerr *pgconn.PgError
 		if ok := errors.As(err, &pgerr); ok {

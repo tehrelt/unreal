@@ -2,18 +2,11 @@ package mailservice
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/tehrelt/unreal/internal/dto"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
-	"github.com/tehrelt/unreal/internal/services"
-	"github.com/tehrelt/unreal/internal/storage"
-)
-
-const (
-	defaultLimit = 50
 )
 
 func (s *Service) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error) {
@@ -36,25 +29,19 @@ func (s *Service) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.
 			return err
 		}
 
+		wg := &sync.WaitGroup{}
+		wg.Add(len(out.Messages))
 		for i, m := range out.Messages {
-			addr := m.From.Address
-			u, err := s.userProvider.Find(ctx, addr)
-			if err != nil {
-				if !errors.Is(err, storage.ErrUserNotFound) {
-					return fmt.Errorf("%s: %w", fn, err)
+			go func(i int) {
+				defer wg.Done()
+				out.Messages[i].From, err = s.getProfilePicture(ctx, m.From)
+				if err != nil {
+					log.Error("cannot fetch picture of sender", sl.Err(err))
 				}
-			}
-
-			if u != nil {
-				log.Debug("found user", slog.Any("user", u))
-				if u.ProfilePicture != nil {
-					link := services.GetPictureLink(s.cfg.Host(), *u.ProfilePicture)
-					log.Debug("profile picture link", slog.String("link", link))
-					out.Messages[i].From.Picture = link
-				}
-			}
-
+			}(i)
 		}
+
+		wg.Wait()
 
 		return nil
 	}); err != nil {

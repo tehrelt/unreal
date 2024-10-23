@@ -29,6 +29,10 @@ type UserProvider interface {
 	Find(ctx context.Context, email string) (*models.User, error)
 }
 
+type KnownHostProvider interface {
+	Find(ctx context.Context, host string) (string, error)
+}
+
 type Service struct {
 	cfg          *config.Config
 	m            storage.Manager
@@ -36,9 +40,10 @@ type Service struct {
 	l            *slog.Logger
 	sender       Sender
 	userProvider UserProvider
+	hostProvider KnownHostProvider
 }
 
-func New(cfg *config.Config, manager storage.Manager, r Repository, sender Sender, userProvider UserProvider) *Service {
+func New(cfg *config.Config, manager storage.Manager, r Repository, sender Sender, userProvider UserProvider, hostProvider KnownHostProvider) *Service {
 	return &Service{
 		cfg:          cfg,
 		m:            manager,
@@ -46,5 +51,6 @@ func New(cfg *config.Config, manager storage.Manager, r Repository, sender Sende
 		l:            slog.With(sl.Method("mailservice.MailService")),
 		sender:       sender,
 		userProvider: userProvider,
+		hostProvider: hostProvider,
 	}
 }

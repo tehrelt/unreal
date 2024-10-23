@@ -62,6 +62,7 @@ func New() (*App, func(), error) {
 		wire.Bind(new(mailservice.UserProvider), new(*usersrepository.Repository)),
 		wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
 		wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
+		wire.Bind(new(mailservice.KnownHostProvider), new(*hosts.Repository)),
 
 		wire.Bind(new(hostservice.FileUploader), new(*fs.FileStorage)),
 		wire.Bind(new(hostservice.HostSaver), new(*hosts.Repository)),

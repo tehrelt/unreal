@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
@@ -12,9 +13,25 @@ import (
 	"github.com/tehrelt/unreal/internal/storage"
 )
 
+func domain(addr string) string {
+	return strings.Split(addr, "@")[1]
+}
+
 func (s *Service) getProfilePicture(ctx context.Context, r entity.AddressInfo) (out entity.AddressInfo, err error) {
 
 	fn := "mailservice.getUser"
+	domain := domain(r.Address)
+
+	pic, err := s.hostProvider.Find(ctx, domain)
+	if err != nil {
+		if !errors.Is(err, storage.ErrHostNotFound) {
+			return out, fmt.Errorf("%s: %w", fn, err)
+		}
+	}
+
+	if pic != "" {
+		r.Picture = services.GetPictureLink(s.cfg.Host(), pic)
+	}
 
 	u, err := s.userProvider.Find(ctx, r.Address)
 	if err != nil {
