@@ -16,6 +16,7 @@ import (
 	"github.com/tehrelt/unreal/internal/lib/aes"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
+	"github.com/tehrelt/unreal/internal/storage/fs"
 	"github.com/tehrelt/unreal/internal/storage/mail/imap"
 	"github.com/tehrelt/unreal/internal/storage/mail/manager"
 	"github.com/tehrelt/unreal/internal/storage/mail/smtp"
@@ -29,32 +30,31 @@ func New() (*App, func(), error) {
 		config.New,
 		_redis,
 		_pgxpool,
+		_secretkeyaes,
 
 		mredis.NewSessionStorage,
 		usersrepository.New,
+		fs.New,
+		imap.NewRepository,
+		smtp.NewRepository,
+
+		aes.NewAesEncryptor,
 
 		wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
 		wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
 		wire.Bind(new(authservice.UserUpdater), new(*usersrepository.Repository)),
-
+		wire.Bind(new(authservice.FileProvider), new(*fs.FileStorage)),
+		wire.Bind(new(authservice.FileUploader), new(*fs.FileStorage)),
 		wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
-
-		_secretkeyaes,
-		aes.NewAesEncryptor,
 		wire.Bind(new(authservice.Encryptor), new(*aes.AesEncryptor)),
 
-		authservice.New,
-
 		wire.Bind(new(mailservice.UserProvider), new(*usersrepository.Repository)),
-
-		imap.NewRepository,
 		wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
-
-		smtp.NewRepository,
 		wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
 
 		manager.NewManager,
 
+		authservice.New,
 		mailservice.New,
 	))
 }

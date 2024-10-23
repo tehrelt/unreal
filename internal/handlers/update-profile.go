@@ -1,13 +1,15 @@
 package handlers
 
 import (
+	"mime/multipart"
+
 	"github.com/labstack/echo/v4"
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 )
 
 type UpdateProfileRequest struct {
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" form:"name"`
 }
 
 func UpdateProfile(s *authservice.AuthService) echo.HandlerFunc {
@@ -19,14 +21,25 @@ func UpdateProfile(s *authservice.AuthService) echo.HandlerFunc {
 			return err
 		}
 
-		if err := c.Bind(&req); err != nil {
+		form, err := c.MultipartForm()
+		if err != nil {
 			return err
+		}
+
+		if len(form.Value["name"]) > 0 {
+			req.Name = &form.Value["name"][0]
+		}
+
+		files := form.File["picture"]
+		var file *multipart.FileHeader
+		if len(files) > 0 {
+			file = files[0]
 		}
 
 		if err := s.UpdateUser(ctx, &entity.UpdateUser{
 			Email:   u.Email,
 			Name:    req.Name,
-			Picture: nil,
+			Picture: file,
 		}); err != nil {
 			return err
 		}

@@ -27,6 +27,14 @@ type UserUpdater interface {
 	Update(ctx context.Context, in *models.UpdateUser) error
 }
 
+type FileProvider interface {
+	File(ctx context.Context, filename string) (*models.File, error)
+}
+
+type FileUploader interface {
+	Upload(ctx context.Context, entry *models.File) error
+}
+
 type Encryptor interface {
 	Encrypt(in string) (string, error)
 	Decrypt(in string) (string, error)
@@ -40,16 +48,29 @@ type AuthService struct {
 	userProvider UserProvider
 	userSaver    UserSaver
 	userUpdater  UserUpdater
+	fileProvider FileProvider
+	fileUploader FileUploader
 }
 
-func New(cfg *config.Config, sessions SessionStorage, encryptor Encryptor, userProvider UserProvider, userSaver UserSaver, userUpdater UserUpdater) *AuthService {
+func New(
+	cfg *config.Config,
+	sessions SessionStorage,
+	encryptor Encryptor,
+	userProvider UserProvider,
+	userSaver UserSaver,
+	userUpdater UserUpdater,
+	fileProvider FileProvider,
+	fileUploader FileUploader,
+) *AuthService {
 	return &AuthService{
 		cfg:          cfg,
+		logger:       slog.Default().With(slog.String("struct", "AuthService")),
 		sessions:     sessions,
 		encryptor:    encryptor,
-		logger:       slog.Default().With(slog.String("struct", "AuthService")),
-		userProvider: userProvider,
 		userSaver:    userSaver,
 		userUpdater:  userUpdater,
+		userProvider: userProvider,
+		fileProvider: fileProvider,
+		fileUploader: fileUploader,
 	}
 }

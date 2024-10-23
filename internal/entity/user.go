@@ -1,6 +1,8 @@
 package entity
 
-import "io"
+import (
+	"mime/multipart"
+)
 
 type Credentials struct {
 	Email    string
@@ -21,5 +23,5 @@ type User struct {
 type UpdateUser struct {
 	Email   string
 	Name    *string
-	Picture io.Reader
+	Picture *multipart.FileHeader
 }
