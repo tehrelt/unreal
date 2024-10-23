@@ -178,7 +178,7 @@ func (r *Repository) replaceAttachments(msg *entity.MessageWithBody, num uint32,
 
 		msg.Body = re.ReplaceAllString(msg.Body, fmt.Sprintf(
 			"http://%s/attachment/%s?mailnum=%d&mailbox=%s",
-			r.cfg.Host,
+			r.cfg.Hostname,
 			cid,
 			num,
 			mailbox,

@@ -5,8 +5,9 @@ import (
 )
 
 type AddressInfo struct {
-	Name    string `json:"name"`
 	Address string `json:"address"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
 }
 type Attachment struct {
 	ContentId   string `json:"contentId"`

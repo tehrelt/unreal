@@ -6,3 +6,5 @@ wire_gen.go
 
 *.jpg
 *.png
+
+volume/

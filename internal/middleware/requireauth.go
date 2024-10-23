@@ -10,7 +10,7 @@ import (
 	"github.com/tehrelt/unreal/internal/services/authservice"
 )
 
-func RequireAuth(as *authservice.AuthService, cfg *config.Config) echo.MiddlewareFunc {
+func RequireAuth(as *authservice.Service, cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 

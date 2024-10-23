@@ -1,7 +1,9 @@
 package sl
 
 import (
+	"fmt"
 	"log/slog"
+	"time"
 )
 
 func Err(err error) slog.Attr {
@@ -22,5 +24,12 @@ func Module(module string) slog.Attr {
 	return slog.Attr{
 		Key:   "module",
 		Value: slog.StringValue(module),
+	}
+}
+
+func Millis(key string, duration time.Duration) slog.Attr {
+	return slog.Attr{
+		Key:   key,
+		Value: slog.StringValue(fmt.Sprintf("%dms", duration.Milliseconds())),
 	}
 }

@@ -2,13 +2,22 @@ package models
 
 import "time"
 
-type CreateUser struct {
+type UserBase struct {
 	Email string
 }
 
+type CreateUser struct {
+	UserBase
+}
+
+type UpdateUser struct {
+	UserBase
+	Name           *string
+	ProfilePicture *string
+}
+
 type User struct {
-	Id             string
-	Email          string
+	UserBase
 	Name           *string
 	ProfilePicture *string
 	CreatedAt      time.Time

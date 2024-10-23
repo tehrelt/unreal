@@ -8,7 +8,7 @@ import (
 	"github.com/tehrelt/unreal/internal/entity"
 )
 
-func (s *AuthService) Authenticate(ctx context.Context, token string) (*entity.SessionInfo, error) {
+func (s *Service) Authenticate(ctx context.Context, token string) (*entity.SessionInfo, error) {
 	claims, err := s.cfg.Jwt.RSA.Verify(token)
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify token: %w", err)

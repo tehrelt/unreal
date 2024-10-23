@@ -1,8 +1,10 @@
 package pg
 
 const (
-	UserTable           = "user"
+	UserTable           = "users"
 	ProfilePictureTable = "profile_pictures"
 	MessagesTable       = "messages"
 	RecipientsTable     = "recipients"
+
+	HostsTable = "known_addresses"
 )

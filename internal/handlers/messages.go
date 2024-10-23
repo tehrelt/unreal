@@ -29,7 +29,7 @@ func Messages(ms *mailservice.Service) echo.HandlerFunc {
 
 		var request MessagesRequest
 
-		ctx, err := extractUser(c)
+		ctx, _, err := extractUser(c)
 		if err != nil {
 			return err
 		}

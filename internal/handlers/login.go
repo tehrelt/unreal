@@ -10,11 +10,12 @@ import (
 	"github.com/tehrelt/unreal/internal/services/authservice"
 )
 
-func LoginHandler(as *authservice.AuthService) echo.HandlerFunc {
+type LoginResponse struct {
+	Token      string `json:"token"`
+	FirstLogon bool   `json:"firstLogon"`
+}
 
-	type response struct {
-		Token string `json:"token"`
-	}
+func LoginHandler(as *authservice.Service) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 
@@ -25,7 +26,7 @@ func LoginHandler(as *authservice.AuthService) echo.HandlerFunc {
 			return echo.ErrInternalServerError
 		}
 
-		token, err := as.Login(c.Request().Context(), req)
+		res, err := as.Login(c.Request().Context(), req)
 		if err != nil {
 			slog.Error("failed to login:", sl.Err(err))
 			return echo.ErrInternalServerError
@@ -33,14 +34,15 @@ func LoginHandler(as *authservice.AuthService) echo.HandlerFunc {
 
 		c.SetCookie(&http.Cookie{
 			Name:     "token",
-			Value:    token,
+			Value:    res.Token,
 			Path:     "/",
 			HttpOnly: true,
 			SameSite: http.SameSiteDefaultMode,
 		})
 
-		return c.JSON(200, &response{
-			Token: token,
+		return c.JSON(200, &LoginResponse{
+			Token:      res.Token,
+			FirstLogon: res.FirstLogon,
 		})
 	}
 }

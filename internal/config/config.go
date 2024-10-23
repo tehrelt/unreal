@@ -25,10 +25,15 @@ func (pg *Pg) ConnectionString() string {
 	return fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=disable", pg.User, pg.Pass, pg.Host, pg.Port, pg.Name)
 }
 
+type FS struct {
+	StaticPath string `env:"FS_STATIC_PATH" env-required:"true"`
+}
+
 type Config struct {
-	Env  string `env:"ENV" env-default:"local"`
-	Host string `env:"HOST" env-default:"localhost"`
-	Port int    `env:"PORT" env-required:"true" env-default:"4200"`
+	Env      string `env:"ENV" env-default:"local"`
+	Protocol string `env:"PROTOCOL" env-default:"http"`
+	Hostname string `env:"HOST" env-default:"localhost"`
+	Port     int    `env:"PORT" env-required:"true" env-default:"4200"`
 
 	App struct {
 		Name    string `env:"APP_NAME" env-required:"true" env-default:"unreal"`
@@ -52,12 +57,18 @@ type Config struct {
 
 	Pg Pg
 
+	Fs FS
+
 	Redis struct {
 		Host string `env:"REDIS_HOST" env-required:"true" env-default:"localhost"`
 		Port int    `env:"REDIS_PORT" env-required:"true" env-default:"6379"`
 		Pass string `env:"REDIS_PASS" env-required:"true" env-default:""`
 		DB   int    `env:"REDIS_DB" env-required:"true" env-default:"0"`
 	}
+}
+
+func (c *Config) Host() string {
+	return fmt.Sprintf("%s://%s:%d", c.Protocol, c.Hostname, c.Port)
 }
 
 func New() *Config {

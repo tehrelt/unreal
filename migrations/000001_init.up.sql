@@ -1,6 +1,5 @@
 create table if not exists "users" (
-  id uuid primary key,
-  email varchar not null unique,
+  email varchar not null unique primary key,
   name varchar,
   created_at timestamp default now(),
   updated_at timestamp
@@ -9,7 +8,7 @@ create table if not exists "users" (
 create index "idx_email_btree" on "users" (email);
 
 create table if not exists "profile_pictures" (
-  user_id uuid references "users" (id) primary key,
+  email varchar references "users" (email) primary key on delete cascade,
   profile_picture varchar not null,
   created_at timestamp default now(),
   updated_at timestamp

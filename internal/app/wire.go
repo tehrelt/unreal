@@ -1,3 +1,6 @@
+//go:build wireinject
+// +build wireinject
+
 package app
 
 import (
@@ -12,10 +15,14 @@ import (
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/lib/aes"
 	"github.com/tehrelt/unreal/internal/services/authservice"
+	"github.com/tehrelt/unreal/internal/services/hostservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
+	"github.com/tehrelt/unreal/internal/storage/fs"
 	"github.com/tehrelt/unreal/internal/storage/mail/imap"
 	"github.com/tehrelt/unreal/internal/storage/mail/manager"
 	"github.com/tehrelt/unreal/internal/storage/mail/smtp"
+	"github.com/tehrelt/unreal/internal/storage/pg/hosts"
+	usersrepository "github.com/tehrelt/unreal/internal/storage/pg/users"
 	mredis "github.com/tehrelt/unreal/internal/storage/redis"
 )
 
@@ -25,29 +32,46 @@ func New() (*App, func(), error) {
 		config.New,
 		_redis,
 		_pgxpool,
+		_secretkeyaes,
 
-		wire.NewSet(
-			mredis.NewSessionStorage,
-			wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
+		// redis
+		mredis.NewSessionStorage,
 
-			_secretkeyaes,
-			aes.NewAesEncryptor,
-			wire.Bind(new(authservice.Encryptor), new(*aes.AesEncryptor)),
+		// pg
+		usersrepository.New,
+		hosts.New,
 
-			authservice.New,
-		),
+		// static
+		fs.New,
 
-		wire.NewSet(
-			imap.NewRepository,
-			wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
+		// protocols
+		imap.NewRepository,
+		smtp.NewRepository,
 
-			smtp.NewRepository,
-			wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
+		// aes encryptor
+		aes.NewAesEncryptor,
 
-			manager.NewManager,
+		wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
+		wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
+		wire.Bind(new(authservice.UserUpdater), new(*usersrepository.Repository)),
+		wire.Bind(new(authservice.FileProvider), new(*fs.FileStorage)),
+		wire.Bind(new(authservice.FileUploader), new(*fs.FileStorage)),
+		wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
+		wire.Bind(new(authservice.Encryptor), new(*aes.AesEncryptor)),
 
-			mailservice.New,
-		),
+		wire.Bind(new(mailservice.UserProvider), new(*usersrepository.Repository)),
+		wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
+		wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
+		wire.Bind(new(mailservice.KnownHostProvider), new(*hosts.Repository)),
+
+		wire.Bind(new(hostservice.FileUploader), new(*fs.FileStorage)),
+		wire.Bind(new(hostservice.HostSaver), new(*hosts.Repository)),
+
+		manager.NewManager,
+
+		authservice.New,
+		mailservice.New,
+		hostservice.New,
 	))
 }
 

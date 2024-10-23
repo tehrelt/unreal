@@ -8,3 +8,8 @@ type LoginDto struct {
 	Imap     entity.Connection `json:"imap"`
 	Smtp     entity.Connection `json:"smtp"`
 }
+
+type LoginResult struct {
+	Token      string
+	FirstLogon bool
+}
