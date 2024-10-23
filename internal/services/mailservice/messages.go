@@ -34,7 +34,7 @@ func (s *Service) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.
 		for i, m := range out.Messages {
 			go func(i int) {
 				defer wg.Done()
-				out.Messages[i].From, err = s.getProfilePicture(ctx, m.From)
+				out.Messages[i].From, err = s.fillAddressInfo(ctx, m.From)
 				if err != nil {
 					log.Error("cannot fetch picture of sender", sl.Err(err))
 				}

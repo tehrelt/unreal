@@ -17,7 +17,7 @@ func domain(addr string) string {
 	return strings.Split(addr, "@")[1]
 }
 
-func (s *Service) getProfilePicture(ctx context.Context, r entity.AddressInfo) (out entity.AddressInfo, err error) {
+func (s *Service) fillAddressInfo(ctx context.Context, r entity.AddressInfo) (out entity.AddressInfo, err error) {
 
 	fn := "mailservice.getUser"
 	domain := domain(r.Address)
@@ -41,6 +41,10 @@ func (s *Service) getProfilePicture(ctx context.Context, r entity.AddressInfo) (
 	}
 
 	if u != nil {
+		if u.Name != nil {
+			r.Name = *u.Name
+		}
+
 		if u.ProfilePicture != nil {
 			r.Picture = services.GetPictureLink(s.cfg.Host(), *u.ProfilePicture)
 		}
@@ -59,13 +63,13 @@ func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (out 
 			return err
 		}
 
-		out.From, err = s.getProfilePicture(ctx, out.From)
+		out.From, err = s.fillAddressInfo(ctx, out.From)
 		if err != nil {
 			return fmt.Errorf("%s: %w", fn, err)
 		}
 
 		for i := range out.To {
-			out.To[i], err = s.getProfilePicture(ctx, out.To[i])
+			out.To[i], err = s.fillAddressInfo(ctx, out.To[i])
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
 			}
