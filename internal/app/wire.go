@@ -62,7 +62,7 @@ func New() (*App, func(), error) {
 
 		wire.NewSet(
 			_secretkeyaes,
-			aes.NewAesEncryptor,
+			aes.NewCipher,
 			aes.NewStringCipher,
 		),
 

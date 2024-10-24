@@ -3,13 +3,16 @@ package aes
 import "encoding/base64"
 
 type StringCipher struct {
-	e *AesEncryptor
+	e *Cipher
 }
 
-func NewStringCipher(secretkey []byte) *StringCipher {
-	return &StringCipher{
-		e: NewAesEncryptor(secretkey),
+func NewStringCipher(secretkey []byte) (*StringCipher, error) {
+	e, err := NewCipher(secretkey)
+	if err != nil {
+		return nil, err
 	}
+
+	return &StringCipher{e}, nil
 }
 
 func (c *StringCipher) Encrypt(data string) (string, error) {

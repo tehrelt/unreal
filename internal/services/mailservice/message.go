@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 
@@ -53,26 +54,54 @@ func (s *Service) fillAddressInfo(ctx context.Context, r entity.AddressInfo) (ou
 	return r, nil
 }
 
-func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (out *entity.MessageWithBody, err error) {
+func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (*entity.MessageWithBody, error) {
 	fn := "mailservice.Message"
 	log := s.l.With(sl.Method(fn), slog.String("mailbox", mailbox), slog.Int("num", int(num)))
 
+	var out *entity.MessageWithBody
+
 	if err := s.m.Do(ctx, func(ctx context.Context) (err error) {
-		out, err = s.r.Message(ctx, mailbox, num)
+		msg, err := s.r.Message(ctx, mailbox, num)
 		if err != nil {
 			return err
 		}
 
-		out.From, err = s.fillAddressInfo(ctx, out.From)
+		if msg.VaultId != "" {
+			msg.Body, err = s.decrypt(ctx, msg.VaultId, msg.Body)
+			if err != nil {
+				return fmt.Errorf("%s: %w", fn, err)
+			}
+		}
+
+		msg.From, err = s.fillAddressInfo(ctx, msg.From)
 		if err != nil {
 			return fmt.Errorf("%s: %w", fn, err)
 		}
 
-		for i := range out.To {
-			out.To[i], err = s.fillAddressInfo(ctx, out.To[i])
+		for i := range msg.To {
+			msg.To[i], err = s.fillAddressInfo(ctx, msg.To[i])
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
 			}
+		}
+
+		body, err := io.ReadAll(msg.Body)
+		if err != nil {
+			return fmt.Errorf("%s: %w", fn, err)
+		}
+
+		out = &entity.MessageWithBody{
+			Message: entity.Message{
+				Id:        msg.SeqNum,
+				To:        msg.To,
+				From:      msg.From,
+				SentDate:  msg.SentDate,
+				Subject:   msg.Subject,
+				IsRead:    msg.IsRead,
+				Encrypted: msg.VaultId != "",
+			},
+			Body:        string(body),
+			Attachments: msg.Attachments,
 		}
 
 		return nil

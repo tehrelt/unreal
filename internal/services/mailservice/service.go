@@ -16,13 +16,13 @@ import (
 type Repository interface {
 	Mailboxes(ctx context.Context) ([]*entity.Mailbox, error)
 	Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error)
-	Message(ctx context.Context, mailbox string, mailnum uint32) (*entity.MessageWithBody, error)
+	Message(ctx context.Context, mailbox string, mailnum uint32) (*models.Message, error)
 	SaveMessageToFolderByAttribute(ctx context.Context, attr string, msg io.Reader) error
 	Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (out io.Reader, ct string, err error)
 }
 
 type Sender interface {
-	Send(ctx context.Context, req *dto.SendMessageDto) (io.Reader, error)
+	Send(ctx context.Context, req *models.SendMessage) (io.Reader, error)
 }
 
 type UserProvider interface {

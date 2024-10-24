@@ -1,6 +1,7 @@
 package aes
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -8,59 +9,62 @@ import (
 	"io"
 )
 
-type AesEncryptor struct {
-	secretkey []byte
+type Cipher struct {
+	key       []byte
+	block     cipher.Block
+	blockSize int
 }
 
-func NewAesEncryptor(secretkey []byte) *AesEncryptor {
-	return &AesEncryptor{secretkey: secretkey}
-}
-
-func (e *AesEncryptor) Encrypt(plaintext []byte) ([]byte, error) {
-
-	fn := "aes.Encrypt"
-	// log := slog.With(sl.Method(fn))
-
-	key := e.secretkey
-	text := plaintext
+func NewCipher(key []byte) (e *Cipher, err error) {
+	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
+		return nil, fmt.Errorf("key must be 16, 24, or 32 bytes")
+	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", fn, err)
+		return nil, err
 	}
 
-	ciphertext := make([]byte, aes.BlockSize+len(text))
-	iv := ciphertext[:aes.BlockSize]
+	return &Cipher{
+		key:       key,
+		block:     block,
+		blockSize: aes.BlockSize,
+	}, nil
+}
+
+func (c *Cipher) Encrypt(input []byte) ([]byte, error) {
+	input = pad(input, c.blockSize)
+	output := make([]byte, len(input)+c.blockSize)
+
+	iv := output[:c.blockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, fmt.Errorf("%s: %v", fn, err)
+		return nil, err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], text)
+	encrypter := cipher.NewCBCEncrypter(c.block, iv)
+	encrypter.CryptBlocks(output[c.blockSize:], input)
 
-	return ciphertext, nil
+	return output, nil
 }
 
-func (e *AesEncryptor) Decrypt(toDecrypt []byte) ([]byte, error) {
+func (c *Cipher) Decrypt(input []byte) ([]byte, error) {
+	iv := input[:c.blockSize]
+	block := cipher.NewCBCDecrypter(c.block, iv)
+	input = input[c.blockSize:]
+	block.CryptBlocks(input, input)
+	output := unpad(input)
 
-	fn := "aes.Decrypt"
+	return output, nil
+}
 
-	key := []byte(e.secretkey)
-	ciphertext := toDecrypt
+func pad(in []byte, blockSize int) []byte {
+	padding := blockSize - len(in)%blockSize
+	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(in, padText...)
+}
 
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %v", fn, err)
-	}
-
-	if len(ciphertext) < aes.BlockSize {
-		return nil, fmt.Errorf("%s: %w", fn, err)
-	}
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-	stream.XORKeyStream(ciphertext, ciphertext)
-
-	return ciphertext, nil
+func unpad(in []byte) []byte {
+	length := len(in)
+	unpadding := int(in[length-1])
+	return in[:length-unpadding]
 }
