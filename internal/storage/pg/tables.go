@@ -7,4 +7,6 @@ const (
 	RecipientsTable     = "recipients"
 
 	HostsTable = "known_addresses"
+
+	VaultTable = "vault"
 )
