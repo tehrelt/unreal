@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -107,16 +106,16 @@ func (s *Service) decrypt(ctx context.Context, id string, body io.Reader) (io.Re
 	}
 	log.Debug("decrypted message", slog.String("data", string(decdata)))
 
-	actualsum := sha1.Sum(decdata)
-	expectedsum, err := base64.StdEncoding.DecodeString(rec.Hashsum)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", fn, err)
-	}
+	// actualsum := sha1.Sum(decdata)
+	// expectedsum, err := base64.StdEncoding.DecodeString(rec.Hashsum)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("%s: %w", fn, err)
+	// }
 
-	if !bytes.Equal(actualsum[:], expectedsum[:]) {
-		return nil, fmt.Errorf("%s: %w", fn, errors.New("hashsum does not match"))
-	}
-	log.Info("hashsum matches")
+	// if !bytes.Equal(actualsum[:], expectedsum[:]) {
+	// 	return nil, fmt.Errorf("%s: %w", fn, errors.New("hashsum does not match"))
+	// }
+	// log.Info("hashsum matches")
 
 	return io.NopCloser(bytes.NewReader(decdata)), nil
 }

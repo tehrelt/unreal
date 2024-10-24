@@ -169,7 +169,7 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	html = strings.TrimRight(html, "\r\n")
+	html = strings.TrimSuffix(html, "\r\n")
 
 	log.Debug("message html", slog.Any("html", html))
 	msg.Body = strings.NewReader(html)

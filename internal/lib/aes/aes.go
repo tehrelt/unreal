@@ -33,38 +33,25 @@ func NewCipher(key []byte) (e *Cipher, err error) {
 }
 
 func (c *Cipher) Encrypt(input []byte) ([]byte, error) {
-	input = pad(input, c.blockSize)
-	output := make([]byte, len(input)+c.blockSize)
-
-	iv := output[:c.blockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+	nonce := make([]byte, c.blockSize)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, err
 	}
 
-	encrypter := cipher.NewCBCEncrypter(c.block, iv)
-	encrypter.CryptBlocks(output[c.blockSize:], input)
+	stream := cipher.NewCFBEncrypter(c.block, nonce)
+	out := &cipher.StreamReader{S: stream, R: bytes.NewReader(input)}
 
-	return output, nil
+	output := make([]byte, c.blockSize)
+	copy(output, nonce)
+
+	r := io.MultiReader(bytes.NewReader(output), out)
+	return io.ReadAll(r)
 }
 
 func (c *Cipher) Decrypt(input []byte) ([]byte, error) {
-	iv := input[:c.blockSize]
-	block := cipher.NewCBCDecrypter(c.block, iv)
-	input = input[c.blockSize:]
-	block.CryptBlocks(input, input)
-	output := unpad(input)
+	nonce := input[:c.blockSize]
 
-	return output, nil
-}
-
-func pad(in []byte, blockSize int) []byte {
-	padding := blockSize - len(in)%blockSize
-	padText := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(in, padText...)
-}
-
-func unpad(in []byte) []byte {
-	length := len(in)
-	unpadding := int(in[length-1])
-	return in[:length-unpadding]
+	stream := cipher.NewCFBDecrypter(c.block, nonce)
+	out := &cipher.StreamReader{S: stream, R: bytes.NewReader(input[c.blockSize:])}
+	return io.ReadAll(out)
 }
