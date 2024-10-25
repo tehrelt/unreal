@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"regexp"
 	"strings"
 
 	"github.com/emersion/go-imap"
@@ -43,6 +42,8 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchRFC822, imap.FetchRFC822Header}
 
 	msg := new(models.Message)
+	html := new(bytes.Buffer)
+	msg.Body = html
 	messages := make(chan *imap.Message, 10)
 	done := make(chan error, 1)
 
@@ -85,14 +86,11 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 		msg.SentDate = m.Envelope.Date
 	}
 
-	var html string
 	if r := m.GetBody(&imap.BodySectionName{}); r != nil {
 		mr, err := mail.CreateReader(r)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create reader: %v", err)
 		}
-
-		// log.Debug("headers", slog.Any("headers", mr.Header.Map()))
 
 		msg.VaultId = mr.Header.Get(storage.EncryptionHeader)
 
@@ -121,10 +119,7 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 				}
 
 				if strings.Compare(ct, "text/html") == 0 {
-					buf := new(bytes.Buffer)
-					buf.ReadFrom(part.Body)
-					html = buf.String()
-					log.Debug("got html", slog.Any("html", html))
+					html.ReadFrom(part.Body)
 				} else if strings.HasPrefix(ct, "image/") {
 					cid := h.Get("Content-Id")
 					if cid == "" {
@@ -165,44 +160,11 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 		}
 	}
 
-	if html, err = r.replaceAttachments(html, msg.Attachments, num, mailbox); err != nil {
-		return nil, fmt.Errorf("%s: %w", fn, err)
-	}
-
-	html = strings.TrimSuffix(html, "\r\n")
-
-	log.Debug("message html", slog.Any("html", html))
-	msg.Body = strings.NewReader(html)
-
-	slog.Info("message", slog.Any("mail", msg))
+	slog.Info("fetched message", slog.Any("mail", msg))
 
 	if err := <-done; err != nil {
 		return nil, fmt.Errorf("failed to fetch messages: %v", err)
 	}
 
 	return msg, nil
-}
-
-func (r *Repository) replaceAttachments(body string, attachments []entity.Attachment, num uint32, mailbox string) (string, error) {
-
-	for _, attachment := range attachments {
-
-		cid := strings.Trim(attachment.ContentId, "<>")
-
-		re, err := regexp.Compile(`cid:` + regexp.QuoteMeta(cid))
-		if err != nil {
-			slog.Debug("failed to compile regexp:", sl.Err(err))
-		}
-
-		body = re.ReplaceAllString(body, fmt.Sprintf(
-			"http://%s/attachment/%s?mailnum=%d&mailbox=%s",
-			r.cfg.Hostname,
-			cid,
-			num,
-			mailbox,
-		))
-
-	}
-
-	return body, nil
 }

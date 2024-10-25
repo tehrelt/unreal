@@ -42,7 +42,6 @@ func (s *Service) encrypt(ctx context.Context, id string, body io.Reader) (io.Re
 		log.Debug("failed to encrypt message", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
-
 	log.Debug("encrypted message", slog.Any("original", data), slog.Any("data", encdata))
 
 	enckey, err := s.keyCipher.Encrypt(bytes.NewReader(key))
@@ -95,16 +94,17 @@ func (s *Service) decrypt(ctx context.Context, id string, body io.Reader) (io.Re
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
-	data, err := io.ReadAll(body)
+	ciphertext, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
-	decdata, err := decryptor.Decrypt(data)
+
+	plaintext, err := decryptor.Decrypt(ciphertext)
 	if err != nil {
 		log.Debug("failed to decrypt message", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
-	log.Debug("decrypted message", slog.String("data", string(decdata)))
+	log.Debug("decrypted message", slog.Any("ciphertext", ciphertext), slog.Any("data", plaintext))
 
 	// actualsum := sha1.Sum(decdata)
 	// expectedsum, err := base64.StdEncoding.DecodeString(rec.Hashsum)
@@ -117,5 +117,5 @@ func (s *Service) decrypt(ctx context.Context, id string, body io.Reader) (io.Re
 	// }
 	// log.Info("hashsum matches")
 
-	return io.NopCloser(bytes.NewReader(decdata)), nil
+	return io.NopCloser(bytes.NewReader(plaintext)), nil
 }

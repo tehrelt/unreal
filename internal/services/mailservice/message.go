@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"regexp"
 	"strings"
 
 	"github.com/tehrelt/unreal/internal/entity"
@@ -90,6 +91,11 @@ func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (*ent
 			return fmt.Errorf("%s: %w", fn, err)
 		}
 
+		html, err := s.replaceEmbeddedPictures(string(body), msg.Attachments, num, mailbox)
+		if err != nil {
+			return fmt.Errorf("%s: %w", fn, err)
+		}
+
 		out = &entity.MessageWithBody{
 			Message: entity.Message{
 				Id:        msg.SeqNum,
@@ -100,7 +106,7 @@ func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (*ent
 				IsRead:    msg.IsRead,
 				Encrypted: msg.VaultId != "",
 			},
-			Body:        string(body),
+			Body:        html,
 			Attachments: msg.Attachments,
 		}
 
@@ -111,4 +117,28 @@ func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (*ent
 	}
 
 	return out, nil
+}
+
+func (s *Service) replaceEmbeddedPictures(body string, attachments []entity.Attachment, num uint32, mailbox string) (string, error) {
+
+	for _, attachment := range attachments {
+
+		cid := strings.Trim(attachment.ContentId, "<>")
+
+		re, err := regexp.Compile(`cid:` + regexp.QuoteMeta(cid))
+		if err != nil {
+			slog.Debug("failed to compile regexp:", sl.Err(err))
+		}
+
+		body = re.ReplaceAllString(body, fmt.Sprintf(
+			"%s/attachment/%s?mailnum=%d&mailbox=%s",
+			s.cfg.Host(),
+			cid,
+			num,
+			mailbox,
+		))
+
+	}
+
+	return body, nil
 }

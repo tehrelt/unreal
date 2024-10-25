@@ -110,8 +110,6 @@ func (r *Repository) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*d
 		toFetch--
 	}
 
-	// slices.Reverse(mm)
-
 	if err := <-done; err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
