@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
 	"github.com/tehrelt/unreal/internal/services"
@@ -68,6 +69,25 @@ func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (*ent
 		}
 
 		if msg.VaultId != "" {
+
+			encfile, found := lo.Find(msg.Attachments, func(a entity.Attachment) bool {
+				return a.Filename == ".unreal"
+			})
+
+			if found {
+				body, _, err := s.r.Attachment(ctx, mailbox, num, encfile.Filename)
+				if err != nil {
+					log.Error("failed to fetch attachment with encoded html")
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+
+				msg.Body = body
+
+				msg.Attachments = lo.Filter(msg.Attachments, func(a entity.Attachment, _ int) bool {
+					return a.Filename != ".unreal"
+				})
+			}
+
 			msg.Body, err = s.decrypt(ctx, msg.VaultId, msg.Body)
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
