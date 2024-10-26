@@ -5,6 +5,10 @@ package app
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -14,6 +18,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/lib/aes"
+	rsacipher "github.com/tehrelt/unreal/internal/lib/rsa"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/hostservice"
 	"github.com/tehrelt/unreal/internal/services/mailservice"
@@ -23,6 +28,7 @@ import (
 	"github.com/tehrelt/unreal/internal/storage/mail/smtp"
 	"github.com/tehrelt/unreal/internal/storage/pg/hosts"
 	usersrepository "github.com/tehrelt/unreal/internal/storage/pg/users"
+	"github.com/tehrelt/unreal/internal/storage/pg/vault"
 	mredis "github.com/tehrelt/unreal/internal/storage/redis"
 )
 
@@ -32,7 +38,6 @@ func New() (*App, func(), error) {
 		config.New,
 		_redis,
 		_pgxpool,
-		_secretkeyaes,
 
 		// redis
 		mredis.NewSessionStorage,
@@ -40,6 +45,7 @@ func New() (*App, func(), error) {
 		// pg
 		usersrepository.New,
 		hosts.New,
+		vault.New,
 
 		// static
 		fs.New,
@@ -48,8 +54,17 @@ func New() (*App, func(), error) {
 		imap.NewRepository,
 		smtp.NewRepository,
 
-		// aes encryptor
-		aes.NewAesEncryptor,
+		wire.NewSet(
+			_rsaPrivateKey,
+			_rsaPublicKey,
+			rsacipher.New,
+		),
+
+		wire.NewSet(
+			_secretkeyaes,
+			aes.NewCipher,
+			aes.NewStringCipher,
+		),
 
 		wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
 		wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
@@ -57,12 +72,14 @@ func New() (*App, func(), error) {
 		wire.Bind(new(authservice.FileProvider), new(*fs.FileStorage)),
 		wire.Bind(new(authservice.FileUploader), new(*fs.FileStorage)),
 		wire.Bind(new(authservice.SessionStorage), new(*mredis.SessionStorage)),
-		wire.Bind(new(authservice.Encryptor), new(*aes.AesEncryptor)),
+		wire.Bind(new(authservice.Encryptor), new(*aes.StringCipher)),
 
 		wire.Bind(new(mailservice.UserProvider), new(*usersrepository.Repository)),
 		wire.Bind(new(mailservice.Repository), new(*imap.Repository)),
 		wire.Bind(new(mailservice.Sender), new(*smtp.Repository)),
 		wire.Bind(new(mailservice.KnownHostProvider), new(*hosts.Repository)),
+		wire.Bind(new(mailservice.Vault), new(*vault.Repository)),
+		wire.Bind(new(mailservice.KeyCipher), new(*rsacipher.Cipher)),
 
 		wire.Bind(new(hostservice.FileUploader), new(*fs.FileStorage)),
 		wire.Bind(new(hostservice.HostSaver), new(*hosts.Repository)),
@@ -120,6 +137,44 @@ func _pgxpool(cfg *config.Config) (*pgxpool.Pool, func(), error) {
 	return db, func() { db.Close() }, nil
 }
 
-func _secretkeyaes(cfg *config.Config) string {
-	return cfg.AES.Secret
+func _secretkeyaes(cfg *config.Config) []byte {
+	return []byte(cfg.AES.Secret)
+}
+
+func _rsaPrivateKey(cfg *config.Config) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(cfg.Jwt.RSA.Private)
+	if block == nil || block.Type != "PRIVATE KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing private key: block.Type = %s", block.Type)
+	}
+
+	privKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	pkey, ok := privKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("not a private key")
+	}
+
+	return pkey, nil
+}
+
+func _rsaPublicKey(cfg *config.Config) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(cfg.Jwt.RSA.Public)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, errors.New("failed to decode PEM block containing public key")
+	}
+
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	rsaPubKey, ok := pubKey.(*rsa.PublicKey)
+	if !ok {
+		return nil, errors.New("not an RSA public key")
+	}
+
+	return rsaPubKey, nil
 }

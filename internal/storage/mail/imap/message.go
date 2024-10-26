@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"regexp"
 	"strings"
 
 	"github.com/emersion/go-imap"
@@ -16,9 +15,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/tehrelt/unreal/internal/entity"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
+	"github.com/tehrelt/unreal/internal/storage"
+	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
-func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*entity.MessageWithBody, error) {
+func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*models.Message, error) {
 
 	fn := "mail.Message"
 	log := slog.With(sl.Method(fn))
@@ -38,9 +39,11 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 	seqSet := new(imap.SeqSet)
 	seqSet.AddNum(num)
 
-	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchRFC822}
+	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchRFC822, imap.FetchRFC822Header}
 
-	msg := new(entity.MessageWithBody)
+	msg := new(models.Message)
+	html := new(bytes.Buffer)
+	msg.Body = html
 	messages := make(chan *imap.Message, 10)
 	done := make(chan error, 1)
 
@@ -65,7 +68,7 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 	}
 
 	if m.Envelope != nil {
-		msg.Id = m.SeqNum
+		msg.SeqNum = m.SeqNum
 		msg.Subject = m.Envelope.Subject
 		from := m.Envelope.From[0]
 		msg.From = entity.AddressInfo{
@@ -89,6 +92,8 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 			return nil, fmt.Errorf("failed to create reader: %v", err)
 		}
 
+		msg.VaultId = mr.Header.Get(storage.EncryptionHeader)
+
 		for {
 			part, err := mr.NextPart()
 
@@ -103,6 +108,9 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 			}
 
 			switch h := part.Header.(type) {
+			case *mail.Header:
+				log.Debug("read header", slog.Any("headers", h))
+
 			case *mail.InlineHeader:
 
 				ct, _, err := h.ContentType()
@@ -111,11 +119,8 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 				}
 
 				if strings.Compare(ct, "text/html") == 0 {
-					buf := new(bytes.Buffer)
-					buf.ReadFrom(part.Body)
-					msg.Body = buf.String()
+					html.ReadFrom(part.Body)
 				} else if strings.HasPrefix(ct, "image/") {
-
 					cid := h.Get("Content-Id")
 					if cid == "" {
 						slog.Debug("cid is empty")
@@ -149,42 +154,17 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 					Filename:    filename,
 					ContentType: ct,
 				})
+			default:
+				log.Debug("unknown header type", slog.String("type", fmt.Sprintf("%T", h)), slog.Any("header", h))
 			}
 		}
 	}
 
-	slog.Info("message", slog.Any("mail", msg))
-
-	if err := r.replaceAttachments(msg, num, mailbox); err != nil {
-		return nil, fmt.Errorf("%s: %w", fn, err)
-	}
+	slog.Info("fetched message", slog.Any("mail", msg))
 
 	if err := <-done; err != nil {
 		return nil, fmt.Errorf("failed to fetch messages: %v", err)
 	}
 
 	return msg, nil
-}
-
-func (r *Repository) replaceAttachments(msg *entity.MessageWithBody, num uint32, mailbox string) error {
-	for _, attachment := range msg.Attachments {
-
-		cid := strings.Trim(attachment.ContentId, "<>")
-
-		re, err := regexp.Compile(`cid:` + regexp.QuoteMeta(cid))
-		if err != nil {
-			slog.Debug("failed to compile regexp:", sl.Err(err))
-		}
-
-		msg.Body = re.ReplaceAllString(msg.Body, fmt.Sprintf(
-			"http://%s/attachment/%s?mailnum=%d&mailbox=%s",
-			r.cfg.Hostname,
-			cid,
-			num,
-			mailbox,
-		))
-
-	}
-
-	return nil
 }

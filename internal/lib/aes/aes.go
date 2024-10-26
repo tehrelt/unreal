@@ -1,67 +1,128 @@
 package aes
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"io"
-	"log/slog"
+	"math"
 )
 
-type AesEncryptor struct {
-	secretkey string
+type Cipher struct {
+	key       []byte
+	block     cipher.Block
+	blockSize int
 }
 
-func NewAesEncryptor(secretkey string) *AesEncryptor {
-	return &AesEncryptor{secretkey: secretkey}
-}
-
-func (e *AesEncryptor) Encrypt(plaintext string) (string, error) {
-
-	slog.Debug("encrypting", slog.String("secretkey", e.secretkey))
-	key := []byte(e.secretkey)
-	text := []byte(plaintext)
+func NewCipher(key []byte) (e *Cipher, err error) {
+	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
+		return nil, fmt.Errorf("key must be 16, 24, or 32 bytes")
+	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", fmt.Errorf("aes.NewCipher: %v", err)
+		return nil, err
 	}
 
-	ciphertext := make([]byte, aes.BlockSize+len(text))
-	iv := ciphertext[:aes.BlockSize]
+	return &Cipher{
+		key:       key,
+		block:     block,
+		blockSize: aes.BlockSize,
+	}, nil
+}
+
+func (c *Cipher) Encrypt(in []byte) ([]byte, error) {
+	in = pad(in, c.blockSize)
+	l := len(in)
+	out := make([]byte, 0, l)
+
+	iters := int(math.Ceil(float64(l) / float64(c.blockSize)))
+	for i := 0; i < iters; i++ {
+		start := i * c.blockSize
+		end := (i + 1) * c.blockSize
+		if end > l {
+			end = l
+		}
+
+		enc, err := c.encrypt(in[start:end])
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", "Encrypt", err)
+		}
+
+		out = append(out, enc...)
+	}
+
+	return out, nil
+}
+
+func (c *Cipher) Decrypt(in []byte) ([]byte, error) {
+	l := len(in)
+	out := make([]byte, 0, l)
+
+	iters := l / c.blockSize
+	if iters%2 != 0 {
+		return nil, fmt.Errorf("malformed input")
+	}
+
+	for i := 0; i < iters; i += 2 {
+		start := i * c.blockSize
+		end := (i + 1) * c.blockSize
+		iv := in[start:end]
+
+		start = end
+		end = (i + 2) * c.blockSize
+		data := in[start:end]
+
+		dec := c.decrypt(data, iv)
+		out = append(out, dec...)
+	}
+
+	out = unpad(out)
+	return out, nil
+}
+
+func (c *Cipher) encrypt(input []byte) ([]byte, error) {
+	output := make([]byte, len(input)+c.blockSize)
+
+	iv := output[:c.blockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], text)
+	encrypter := cipher.NewCBCEncrypter(c.block, iv)
+	encrypter.CryptBlocks(output[c.blockSize:], input)
 
-	return base64.URLEncoding.EncodeToString(ciphertext), nil
+	return output, nil
 }
 
-func (e *AesEncryptor) Decrypt(toDecrypt string) (string, error) {
+func (c *Cipher) decrypt(input, iv []byte) []byte {
+	block := cipher.NewCBCDecrypter(c.block, iv)
+	output := make([]byte, len(input))
+	block.CryptBlocks(output, input)
+	return output
+}
 
-	key := []byte(e.secretkey)
-	ciphertext, err := base64.URLEncoding.DecodeString(toDecrypt)
-	if err != nil {
-		return "", fmt.Errorf("base64.URLEncoding.DecodeString: %v", err)
+func pad(in []byte, blockSize int) []byte {
+	padding := blockSize - len(in)%blockSize
+	if padding == blockSize {
+		padding = 0
+	}
+	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(in, padText...)
+}
+
+func unpad(in []byte) []byte {
+	length := len(in)
+	if length == 0 {
+		return in
 	}
 
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return "", fmt.Errorf("aes.NewCipher: %v", err)
+	unpadding := int(in[length-1])
+	if unpadding < 16 {
+		return in[:length-unpadding]
 	}
 
-	if len(ciphertext) < aes.BlockSize {
-		return "", fmt.Errorf("ciphertext too short")
-	}
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-	stream.XORKeyStream(ciphertext, ciphertext)
-
-	return string(ciphertext), nil
+	return in
 }

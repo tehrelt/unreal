@@ -5,6 +5,7 @@ const (
 	ProfilePictureTable = "profile_pictures"
 	MessagesTable       = "messages"
 	RecipientsTable     = "recipients"
-
-	HostsTable = "known_addresses"
+	HostsTable          = "known_addresses"
+	VaultTable          = "vault"
+	VaultFilesTable     = "vault_files"
 )

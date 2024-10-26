@@ -16,12 +16,13 @@ type Attachment struct {
 }
 
 type Message struct {
-	Id       uint32        `json:"id"`
-	To       []AddressInfo `json:"to"`
-	From     AddressInfo   `json:"from"`
-	Subject  string        `json:"subject"`
-	SentDate time.Time     `json:"sentDate"`
-	IsRead   bool          `json:"isRead"`
+	Id        uint32        `json:"id"`
+	To        []AddressInfo `json:"to"`
+	From      AddressInfo   `json:"from"`
+	Subject   string        `json:"subject"`
+	SentDate  time.Time     `json:"sentDate"`
+	IsRead    bool          `json:"isRead"`
+	Encrypted bool          `json:"encrypted"`
 }
 
 type MessageWithBody struct {

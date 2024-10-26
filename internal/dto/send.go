@@ -27,9 +27,10 @@ func (m *MailRecord) String() string {
 }
 
 type SendMessageDto struct {
-	From        *MailRecord
-	To          []*MailRecord
-	Subject     string
-	Body        io.Reader
-	Attachments []*multipart.FileHeader
+	From          *MailRecord
+	To            []*MailRecord
+	Subject       string
+	Body          io.Reader
+	Attachments   []*multipart.FileHeader
+	DoEncryiption bool
 }
