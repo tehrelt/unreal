@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime/multipart"
 
 	"github.com/google/uuid"
@@ -72,41 +73,60 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 		}
 
 		if req.DoEncryiption {
-			id := uuid.NewString()
+			messageId := uuid.NewString()
 
-			buf := new(bytes.Buffer)
-			enc, err := s.encrypt(ctx, id, req.Body)
+			args := &models.AppendFilesArgs{
+				VaultFileBase: models.VaultFileBase{
+					MessageId: messageId,
+				},
+				Files: make([]models.VaultFileMeta, 0, len(in.Attachments)),
+			}
+
+			for i, f := range in.Attachments {
+				log.Debug("encrypting attachment", slog.String("filename", f.Filename))
+				body, err := f.Open()
+				if err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+				defer body.Close()
+
+				enc, err := s.encrypt(body)
+				if err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+
+				fid := uuid.NewString()
+				args.Files = append(args.Files, models.VaultFileMeta{
+					FileId:      fid,
+					Filename:    f.Filename,
+					ContentType: f.Header.Get("Content-Type"),
+					Key:         enc.k,
+					Hashsum:     enc.sum,
+				})
+
+				f, err := createMultipartHeader(fid, enc.r, enc.l)
+				if err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+
+				in.Attachments[i] = f
+			}
+
+			enc, err := s.encryptBody(ctx, messageId, req.Body)
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
 			}
-
-			fwr := multipart.NewWriter(buf)
-
-			fpt, err := fwr.CreateFormFile("file", ".unreal")
+			if err := s.vault.AppendFiles(ctx, args); err != nil {
+				return fmt.Errorf("%s: %w", fn, err)
+			}
+			body, err := createMultipartHeader(".unreal", enc.r, enc.l)
 			if err != nil {
-				log.Error("cannot create form file", sl.Err(err))
 				return fmt.Errorf("%s: %w", fn, err)
 			}
-
-			if _, err := io.Copy(fpt, enc); err != nil {
-				log.Error("cannot copy encoded data to form part", sl.Err(err))
-				return fmt.Errorf("%s: %w", fn, err)
-			}
-			fwr.Close()
-
-			bufreader := bytes.NewReader(buf.Bytes())
-			frd := multipart.NewReader(bufreader, fwr.Boundary())
-
-			frm, err := frd.ReadForm(1 << 20)
-			if err != nil {
-				log.Error("cannot read form", sl.Err(err))
-				return fmt.Errorf("%s: %w", fn, err)
-			}
-			in.Attachments = append(in.Attachments, frm.File["file"][0])
+			in.Attachments = append(in.Attachments, body)
 
 			in.Body = new(bytes.Buffer)
-
-			in.EncryptKey = &id
+			in.EncryptKey = messageId
 		}
 
 		msg, err := s.sender.Send(ctx, in)
@@ -126,4 +146,36 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 	}
 
 	return nil
+}
+
+func createMultipartHeader(name string, r io.Reader, size int64) (*multipart.FileHeader, error) {
+
+	fn := "createMultipartHeader"
+	log := slog.With(sl.Method(fn))
+
+	buf := new(bytes.Buffer)
+	fwr := multipart.NewWriter(buf)
+
+	fpt, err := fwr.CreateFormFile("file", name)
+	if err != nil {
+		log.Error("cannot create form file", sl.Err(err))
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if _, err := io.Copy(fpt, r); err != nil {
+		log.Error("cannot copy encoded data to form part", sl.Err(err))
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+	fwr.Close()
+
+	bufreader := bytes.NewReader(buf.Bytes())
+	frd := multipart.NewReader(bufreader, fwr.Boundary())
+
+	frm, err := frd.ReadForm(size)
+	if err != nil {
+		log.Error("cannot read form", sl.Err(err))
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return frm.File["file"][0], nil
 }

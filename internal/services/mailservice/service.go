@@ -18,7 +18,8 @@ type Repository interface {
 	Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error)
 	Message(ctx context.Context, mailbox string, mailnum uint32) (*models.Message, error)
 	SaveMessageToFolderByAttribute(ctx context.Context, attr string, msg io.Reader) error
-	Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (out io.Reader, ct string, err error)
+	Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (out *models.Attachment, err error)
+	IsMessageEncrypted(ctx context.Context, mailbox string, num uint32) (vaultId string, err error)
 }
 
 type Sender interface {
@@ -36,6 +37,9 @@ type KnownHostProvider interface {
 type Vault interface {
 	Insert(ctx context.Context, in *models.VaultRecord) error
 	Find(ctx context.Context, messageId string) (*models.VaultRecord, error)
+	File(ctx context.Context, messageId, name string) (*models.VaultFile, error)
+	FileById(ctx context.Context, id string) (*models.VaultFile, error)
+	AppendFiles(ctx context.Context, in *models.AppendFilesArgs) error
 }
 
 type KeyCipher interface {

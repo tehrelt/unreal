@@ -28,5 +28,5 @@ type SendMessage struct {
 	Subject     string
 	Body        io.Reader
 	Attachments []*multipart.FileHeader
-	EncryptKey  *string
+	EncryptKey  string
 }

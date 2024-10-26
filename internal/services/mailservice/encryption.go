@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,7 +16,40 @@ import (
 	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
-func (s *Service) encrypt(ctx context.Context, id string, body io.Reader) (io.Reader, error) {
+type encrypted struct {
+	r   io.Reader
+	l   int64
+	k   string
+	sum string
+}
+type decrypted struct {
+	r io.Reader
+	l int64
+}
+
+func (s *Service) encryptBody(ctx context.Context, mid string, body io.Reader) (*encrypted, error) {
+
+	fn := "mailservice.encryptBody"
+	// log := s.l.With(sl.Method(fn))
+
+	enc, err := s.encrypt(body)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	in := &models.VaultRecord{
+		Id:      mid,
+		Key:     enc.k,
+		Hashsum: enc.sum,
+	}
+	if err := s.vault.Insert(ctx, in); err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return enc, nil
+}
+
+func (s *Service) encrypt(body io.Reader) (*encrypted, error) {
 
 	fn := "mailservice.encrypt"
 	log := s.l.With(sl.Method(fn))
@@ -54,21 +88,18 @@ func (s *Service) encrypt(ctx context.Context, id string, body io.Reader) (io.Re
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	in := &models.VaultRecord{
-		Id:      id,
-		Key:     base64.StdEncoding.EncodeToString(ekey),
-		Hashsum: base64.StdEncoding.EncodeToString(hashsum[:]),
-	}
-	if err := s.vault.Insert(ctx, in); err != nil {
-		return nil, fmt.Errorf("%s: %w", fn, err)
+	out := &encrypted{
+		r:   io.NopCloser(bytes.NewReader(encdata)),
+		l:   int64(len(encdata)),
+		k:   base64.StdEncoding.EncodeToString(ekey),
+		sum: base64.StdEncoding.EncodeToString(hashsum[:]),
 	}
 
-	return io.NopCloser(bytes.NewReader(encdata)), nil
+	return out, nil
 }
 
-func (s *Service) decrypt(ctx context.Context, id string, body io.Reader) (io.Reader, error) {
-	fn := "mailservice.decrypt"
-	log := s.l.With(sl.Method(fn))
+func (s *Service) decryptBody(ctx context.Context, id string, body io.Reader) (*decrypted, error) {
+	fn := "mailservice.decryptBody"
 
 	rec, err := s.vault.Find(ctx, id)
 	if err != nil {
@@ -79,6 +110,39 @@ func (s *Service) decrypt(ctx context.Context, id string, body io.Reader) (io.Re
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
+
+	hashsum, err := base64.StdEncoding.DecodeString(rec.Hashsum)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return s.decrypt(key, hashsum, body)
+}
+
+func (s *Service) decryptFile(ctx context.Context, id string, body io.Reader) (*decrypted, error) {
+	fn := "mailservice.decryptFile"
+
+	rec, err := s.vault.FileById(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	key, err := base64.StdEncoding.DecodeString(rec.Key)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	hashsum, err := base64.StdEncoding.DecodeString(rec.Hashsum)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return s.decrypt(key, hashsum, body)
+}
+
+func (s *Service) decrypt(key, hashsum []byte, body io.Reader) (*decrypted, error) {
+	fn := "mailservice.decrypt"
+	log := s.l.With(sl.Method(fn))
 
 	origkey, err := s.keyCipher.Decrypt(bytes.NewReader(key))
 	if err != nil {
@@ -104,18 +168,19 @@ func (s *Service) decrypt(ctx context.Context, id string, body io.Reader) (io.Re
 		log.Debug("failed to decrypt message", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
-	log.Debug("decrypted message", slog.Any("ciphertext", ciphertext), slog.Any("data", plaintext))
+	log.Debug("decrypted message", slog.Any("ciphertext", ciphertext), slog.Any("plaintext", plaintext))
 
-	// actualsum := sha1.Sum(decdata)
-	// expectedsum, err := base64.StdEncoding.DecodeString(rec.Hashsum)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("%s: %w", fn, err)
-	// }
+	actualsum := sha1.Sum(plaintext)
+	if !bytes.Equal(actualsum[:], hashsum) {
+		log.Error("hashsum does not match", slog.Any("actual", actualsum[:]), slog.Any("expected", hashsum))
+		return nil, fmt.Errorf("%s: %w", fn, errors.New("hashsum does not match"))
+	}
+	log.Info("hashsum matches")
 
-	// if !bytes.Equal(actualsum[:], expectedsum[:]) {
-	// 	return nil, fmt.Errorf("%s: %w", fn, errors.New("hashsum does not match"))
-	// }
-	// log.Info("hashsum matches")
+	out := &decrypted{
+		r: io.NopCloser(bytes.NewReader(plaintext)),
+		l: int64(len(plaintext)),
+	}
 
-	return io.NopCloser(bytes.NewReader(plaintext)), nil
+	return out, nil
 }

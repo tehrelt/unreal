@@ -46,8 +46,8 @@ func (r *Repository) Send(ctx context.Context, in *models.SendMessage) (io.Reade
 	// Body
 	builder := new(strings.Builder)
 
-	if in.EncryptKey != nil {
-		m.SetHeader(storage.EncryptionHeader, *in.EncryptKey)
+	if in.EncryptKey != "" {
+		m.SetHeader(storage.EncryptionHeader, in.EncryptKey)
 	}
 
 	if _, err := io.Copy(builder, in.Body); err != nil {

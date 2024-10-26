@@ -14,9 +14,10 @@ import (
 	"github.com/emersion/go-message/mail"
 	"github.com/google/uuid"
 	"github.com/tehrelt/unreal/internal/lib/logger/sl"
+	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
-func (r *Repository) Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (out io.Reader, ct string, err error) {
+func (r *Repository) Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (*models.Attachment, error) {
 
 	fn := "imap.Attachment"
 	log := slog.With(slog.String("Method", "Mail"))
@@ -30,19 +31,20 @@ func (r *Repository) Attachment(ctx context.Context, mailbox string, mailnum uin
 
 	c, err := r.ctxman.get(ctx)
 	if err != nil {
-		return nil, "", fmt.Errorf("%s: %w", fn, err)
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	_, err = c.Select(mailbox, false)
 	if err != nil {
-		return nil, "", fmt.Errorf("%s: %v", fn, err)
+		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
 
 	seqSet := new(imap.SeqSet)
 	seqSet.AddNum(mailnum)
 
-	items := []imap.FetchItem{imap.FetchRFC822}
+	items := []imap.FetchItem{imap.FetchRFC822, imap.FetchRFC822Header}
 
+	out := new(models.Attachment)
 	messages := make(chan *imap.Message, 10)
 	done := make(chan error, 1)
 
@@ -52,13 +54,13 @@ func (r *Repository) Attachment(ctx context.Context, mailbox string, mailnum uin
 
 	m := <-messages
 	if m == nil {
-		return nil, "", fmt.Errorf("failed to fetch message: %w", err)
+		return nil, fmt.Errorf("failed to fetch message: %w", err)
 	}
 
 	if rr := m.GetBody(&imap.BodySectionName{}); rr != nil {
 		mr, err := mail.CreateReader(rr)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to create reader: %v", err)
+			return nil, fmt.Errorf("failed to create reader: %v", err)
 		}
 
 		for {
@@ -77,15 +79,14 @@ func (r *Repository) Attachment(ctx context.Context, mailbox string, mailnum uin
 			switch h := part.Header.(type) {
 			case *mail.InlineHeader:
 				cid := h.Get("Content-Id")
-				log.Debug("get a cid", slog.Any("cid", cid))
 				if cid == "" {
 					slog.Debug("cid is empty")
 					continue
 				}
 
-				ct, _, err = h.ContentType()
+				out.ContentType, _, err = h.ContentType()
 				if err != nil {
-					return nil, "", fmt.Errorf("failed to get content type: %v", err)
+					return nil, fmt.Errorf("failed to get content type: %v", err)
 				}
 
 				contains := strings.Contains(cid, target)
@@ -94,9 +95,8 @@ func (r *Repository) Attachment(ctx context.Context, mailbox string, mailnum uin
 
 				if contains {
 					log.Debug("found a cid")
-					buf := new(bytes.Buffer)
-					buf.ReadFrom(part.Body)
-					out = buf
+					out.R = new(bytes.Buffer)
+					out.R.(*bytes.Buffer).ReadFrom(part.Body)
 				}
 
 			case *mail.AttachmentHeader:
@@ -108,25 +108,28 @@ func (r *Repository) Attachment(ctx context.Context, mailbox string, mailnum uin
 				}
 
 				if strings.Compare(filename, target) == 0 {
-					ct, _, err = h.ContentType()
+					out.ContentType, _, err = h.ContentType()
 					if err != nil {
 						slog.Warn("failed to get content type", sl.Err(err))
-						ct = "application/octet-stream"
+						out.ContentType = "application/octet-stream"
 					}
 
-					log.Debug("found a filename", slog.Any("filename", filename), slog.Any("targetCid", target))
-					buf := new(bytes.Buffer)
-					buf.ReadFrom(part.Body)
-					out = buf
+					log.Debug(
+						"found a filename",
+						slog.Any("filename", filename),
+						slog.Any("targetCid", target),
+					)
+					out.R = new(bytes.Buffer)
+					out.R.(*bytes.Buffer).ReadFrom(part.Body)
 					break
 				}
 			}
 		}
 	}
 
-	if out == nil {
-		return nil, "", fmt.Errorf("failed to find attachment")
+	if out.R == nil {
+		return nil, fmt.Errorf("failed to find attachment")
 	}
 
-	return
+	return out, nil
 }

@@ -75,22 +75,37 @@ func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (*ent
 			})
 
 			if found {
-				body, _, err := s.r.Attachment(ctx, mailbox, num, encfile.Filename)
+				attach, err := s.r.Attachment(ctx, mailbox, num, encfile.Filename)
 				if err != nil {
 					log.Error("failed to fetch attachment with encoded html")
 					return fmt.Errorf("%s: %w", fn, err)
 				}
 
-				msg.Body = body
+				msg.Body = attach.R
 
 				msg.Attachments = lo.Filter(msg.Attachments, func(a entity.Attachment, _ int) bool {
 					return a.Filename != ".unreal"
 				})
 			}
 
-			msg.Body, err = s.decrypt(ctx, msg.VaultId, msg.Body)
+			dec, err := s.decryptBody(ctx, msg.VaultId, msg.Body)
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
+			}
+
+			msg.Body = dec.r
+
+			for i, f := range msg.Attachments {
+				rec, err := s.vault.FileById(ctx, f.Filename)
+				if err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+
+				msg.Attachments[i] = entity.Attachment{
+					ContentId:   rec.Filename,
+					Filename:    rec.Filename,
+					ContentType: rec.ContentType,
+				}
 			}
 		}
 
