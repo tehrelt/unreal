@@ -1,9 +1,12 @@
 package mailservice
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -23,8 +26,8 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 		in := &models.SendMessage{
 			From:        req.From,
 			To:          req.To,
-			Body:        req.Body,
 			Subject:     req.Subject,
+			Body:        req.Body,
 			Attachments: req.Attachments,
 		}
 
@@ -71,10 +74,37 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 		if req.DoEncryiption {
 			id := uuid.NewString()
 
-			in.Body, err = s.encrypt(ctx, id, req.Body)
+			buf := new(bytes.Buffer)
+			enc, err := s.encrypt(ctx, id, req.Body)
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
 			}
+
+			fwr := multipart.NewWriter(buf)
+
+			fpt, err := fwr.CreateFormFile("file", ".unreal")
+			if err != nil {
+				log.Error("cannot create form file", sl.Err(err))
+				return fmt.Errorf("%s: %w", fn, err)
+			}
+
+			if _, err := io.Copy(fpt, enc); err != nil {
+				log.Error("cannot copy encoded data to form part", sl.Err(err))
+				return fmt.Errorf("%s: %w", fn, err)
+			}
+			fwr.Close()
+
+			bufreader := bytes.NewReader(buf.Bytes())
+			frd := multipart.NewReader(bufreader, fwr.Boundary())
+
+			frm, err := frd.ReadForm(1 << 20)
+			if err != nil {
+				log.Error("cannot read form", sl.Err(err))
+				return fmt.Errorf("%s: %w", fn, err)
+			}
+			in.Attachments = append(in.Attachments, frm.File["file"][0])
+
+			in.Body = new(bytes.Buffer)
 
 			in.EncryptKey = &id
 		}
@@ -91,6 +121,7 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 
 		return nil
 	}); err != nil {
+		log.Error("cannot send message", sl.Err(err))
 		return fmt.Errorf("%s: %w", fn, err)
 	}
 
