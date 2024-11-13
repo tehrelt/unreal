@@ -116,8 +116,10 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
 			}
-			if err := s.vault.AppendFiles(ctx, args); err != nil {
-				return fmt.Errorf("%s: %w", fn, err)
+			if len(in.Attachments) != 0 {
+				if err := s.vault.AppendFiles(ctx, args); err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
 			}
 			body, err := createMultipartHeader(".unreal", enc.r, enc.l)
 			if err != nil {
