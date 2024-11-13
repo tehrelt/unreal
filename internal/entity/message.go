@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+type HealthInfo struct {
+	TlsEnabled bool   `json:"tlsEnabled"`
+	Version    string `json:"version"`
+}
+
 type AddressInfo struct {
 	Address string `json:"address"`
 	Name    string `json:"name"`

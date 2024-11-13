@@ -20,6 +20,7 @@ type Repository interface {
 	SaveMessageToFolderByAttribute(ctx context.Context, attr string, msg io.Reader) error
 	Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (out *models.Attachment, err error)
 	IsMessageEncrypted(ctx context.Context, mailbox string, num uint32) (vaultId string, err error)
+	Health(ctx context.Context) (bool, error)
 }
 
 type Sender interface {

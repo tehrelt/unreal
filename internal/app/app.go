@@ -50,6 +50,7 @@ func (a *App) initRoutes() {
 	a.app.POST("/login", handlers.LoginHandler(a.as))
 	a.app.GET("/me", handlers.Profile(a.as), reqauth)
 	a.app.PUT("/me", handlers.UpdateProfile(a.as), reqauth)
+	a.app.GET("/health", handlers.HealthCheck(a.ms), reqauth)
 	a.app.GET("/mailboxes", handlers.Mailboxes(a.ms), reqauth)
 	a.app.GET("/file/:filename", handlers.File(a.as))
 
