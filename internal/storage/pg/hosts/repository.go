@@ -33,8 +33,6 @@ func (r *Repository) Find(ctx context.Context, host string) (string, error) {
 	fn := "hosts.Find"
 	log := r.l.With(sl.Method(fn))
 
-	log.Debug("find host")
-
 	sql, args, err := sq.
 		Select("h.picture").
 		From(fmt.Sprintf("%s h", pg.HostsTable)).

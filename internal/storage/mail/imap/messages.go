@@ -74,7 +74,11 @@ func (r *Repository) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*d
 	seqSet := new(imap.SeqSet)
 	seqSet.AddRange(uint32(cursor.Start), uint32(cursor.End))
 
-	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchRFC822}
+	items := []imap.FetchItem{
+		imap.FetchEnvelope,
+		imap.FetchFlags,
+		imap.FetchItem("BODY.PEEK[HEADER]"),
+	}
 
 	messages := make(chan *imap.Message, 10)
 	done := make(chan error, 1)
@@ -106,7 +110,12 @@ func (r *Repository) Messages(ctx context.Context, in *dto.FetchMessagesDto) (*d
 			msg.SentDate = m.Envelope.Date
 		}
 
-		if r := m.GetBody(&imap.BodySectionName{Peek: true}); r != nil {
+		// headerSection, _ := imap.ParseBodySectionName("RFC822.HEADER")
+
+		h, _ := imap.ParseBodySectionName("BODY.PEEK[HEADER]")
+
+		if r := m.GetBody(h); r != nil {
+			log.Debug("reading message headers")
 			mr, err := mail.CreateReader(r)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create reader: %v", err)

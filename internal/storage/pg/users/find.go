@@ -47,7 +47,7 @@ func (r *Repository) Find(ctx context.Context, email string) (*models.User, erro
 	var u models.User
 	if err := connection.QueryRow(ctx, sql, args...).Scan(&u.Email, &u.Name, &u.CreatedAt, &u.UpdatedAt, &u.ProfilePicture); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			log.Debug("user not found", slog.String("email", email))
+			// log.Debug("user not found", slog.String("email", email))
 			return nil, fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
 		}
 		var pgerr *pgconn.PgError
