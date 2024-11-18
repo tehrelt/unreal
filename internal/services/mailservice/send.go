@@ -17,6 +17,121 @@ import (
 	"github.com/tehrelt/unreal/internal/storage/models"
 )
 
+func (s *Service) buildMessage(ctx context.Context, req *dto.SendMessageDto) (*models.SendMessage, error) {
+
+	fn := "mailservice.buildMessage"
+	log := s.l.With(sl.Method(fn))
+
+	in := &models.SendMessage{
+		From:        req.From,
+		To:          req.To,
+		Subject:     req.Subject,
+		Body:        req.Body,
+		Attachments: req.Attachments,
+	}
+
+	u, err := s.userProvider.Find(ctx, in.From.Email)
+	if err != nil {
+		if !errors.Is(err, storage.ErrUserNotFound) {
+			log.Warn("failed to find user", sl.Err(err))
+			return nil, fmt.Errorf("%s: %w", fn, err)
+		}
+	}
+	in.From.SetName(u.Name)
+
+	done := make(chan error)
+	go func(ctx context.Context) {
+		in.To = lo.Map(in.To, func(r *dto.MailRecord, _ int) *dto.MailRecord {
+			if err != nil {
+				return nil
+			}
+
+			u, err := s.userProvider.Find(ctx, r.Email)
+			if err != nil {
+				if !errors.Is(err, storage.ErrUserNotFound) {
+					log.Warn("failed to find user", sl.Err(err))
+					done <- err
+					return nil
+				}
+			}
+
+			if u != nil {
+				r.SetName(u.Name)
+			}
+
+			return r
+		})
+
+		done <- nil
+	}(ctx)
+
+	err = <-done
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if req.DoEncryiption {
+		messageId := uuid.NewString()
+
+		args := &models.AppendFilesArgs{
+			VaultFileBase: models.VaultFileBase{
+				MessageId: messageId,
+			},
+			Files: make([]models.VaultFileMeta, 0, len(in.Attachments)),
+		}
+
+		for i, f := range in.Attachments {
+			log.Debug("encrypting attachment", slog.String("filename", f.Filename))
+			body, err := f.Open()
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", fn, err)
+			}
+			defer body.Close()
+
+			enc, err := s.encrypt(body)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", fn, err)
+			}
+
+			fid := uuid.NewString()
+			args.Files = append(args.Files, models.VaultFileMeta{
+				FileId:      fid,
+				Filename:    f.Filename,
+				ContentType: f.Header.Get("Content-Type"),
+				Key:         enc.k,
+				Hashsum:     enc.sum,
+			})
+
+			f, err := createMultipartHeader(fid, enc.r, enc.l)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", fn, err)
+			}
+
+			in.Attachments[i] = f
+		}
+
+		enc, err := s.encryptBody(ctx, messageId, req.Body)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", fn, err)
+		}
+		if len(in.Attachments) != 0 {
+			if err := s.vault.AppendFiles(ctx, args); err != nil {
+				return nil, fmt.Errorf("%s: %w", fn, err)
+			}
+		}
+		body, err := createMultipartHeader(".unreal", enc.r, enc.l)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", fn, err)
+		}
+		in.Attachments = append(in.Attachments, body)
+
+		in.Body = new(bytes.Buffer)
+		in.EncryptKey = messageId
+	}
+
+	return in, nil
+}
+
 func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 
 	fn := "mailservice.Send"
@@ -24,111 +139,9 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 
 	if err := s.m.Do(ctx, func(ctx context.Context) error {
 
-		in := &models.SendMessage{
-			From:        req.From,
-			To:          req.To,
-			Subject:     req.Subject,
-			Body:        req.Body,
-			Attachments: req.Attachments,
-		}
-
-		u, err := s.userProvider.Find(ctx, in.From.Email)
-		if err != nil {
-			if !errors.Is(err, storage.ErrUserNotFound) {
-				log.Warn("failed to find user", sl.Err(err))
-				return fmt.Errorf("%s: %w", fn, err)
-			}
-		}
-		in.From.SetName(u.Name)
-
-		done := make(chan error)
-		go func(ctx context.Context) {
-			in.To = lo.Map(in.To, func(r *dto.MailRecord, _ int) *dto.MailRecord {
-				if err != nil {
-					return nil
-				}
-
-				u, err := s.userProvider.Find(ctx, r.Email)
-				if err != nil {
-					if !errors.Is(err, storage.ErrUserNotFound) {
-						log.Warn("failed to find user", sl.Err(err))
-						done <- err
-						return nil
-					}
-				}
-
-				if u != nil {
-					r.SetName(u.Name)
-				}
-
-				return r
-			})
-
-			done <- nil
-		}(ctx)
-
-		err = <-done
+		in, err := s.buildMessage(ctx, req)
 		if err != nil {
 			return fmt.Errorf("%s: %w", fn, err)
-		}
-
-		if req.DoEncryiption {
-			messageId := uuid.NewString()
-
-			args := &models.AppendFilesArgs{
-				VaultFileBase: models.VaultFileBase{
-					MessageId: messageId,
-				},
-				Files: make([]models.VaultFileMeta, 0, len(in.Attachments)),
-			}
-
-			for i, f := range in.Attachments {
-				log.Debug("encrypting attachment", slog.String("filename", f.Filename))
-				body, err := f.Open()
-				if err != nil {
-					return fmt.Errorf("%s: %w", fn, err)
-				}
-				defer body.Close()
-
-				enc, err := s.encrypt(body)
-				if err != nil {
-					return fmt.Errorf("%s: %w", fn, err)
-				}
-
-				fid := uuid.NewString()
-				args.Files = append(args.Files, models.VaultFileMeta{
-					FileId:      fid,
-					Filename:    f.Filename,
-					ContentType: f.Header.Get("Content-Type"),
-					Key:         enc.k,
-					Hashsum:     enc.sum,
-				})
-
-				f, err := createMultipartHeader(fid, enc.r, enc.l)
-				if err != nil {
-					return fmt.Errorf("%s: %w", fn, err)
-				}
-
-				in.Attachments[i] = f
-			}
-
-			enc, err := s.encryptBody(ctx, messageId, req.Body)
-			if err != nil {
-				return fmt.Errorf("%s: %w", fn, err)
-			}
-			if len(in.Attachments) != 0 {
-				if err := s.vault.AppendFiles(ctx, args); err != nil {
-					return fmt.Errorf("%s: %w", fn, err)
-				}
-			}
-			body, err := createMultipartHeader(".unreal", enc.r, enc.l)
-			if err != nil {
-				return fmt.Errorf("%s: %w", fn, err)
-			}
-			in.Attachments = append(in.Attachments, body)
-
-			in.Body = new(bytes.Buffer)
-			in.EncryptKey = messageId
 		}
 
 		msg, err := s.sender.Send(ctx, in)

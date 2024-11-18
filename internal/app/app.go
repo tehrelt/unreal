@@ -57,9 +57,11 @@ func (a *App) initRoutes() {
 	mailbox := a.app.Group("/:mailbox", reqauth)
 	mailbox.GET("", handlers.Messages(a.ms))
 	mailbox.GET("/:mailnum", handlers.Message(a.ms))
+	mailbox.DELETE("/:mailnum", handlers.Delete(a.ms))
 
 	a.app.GET("/attachment/:filename", handlers.Attachment(a.ms), reqauth)
 	a.app.POST("/send", handlers.SendMail(a.ms), reqauth)
+	a.app.POST("/draft", handlers.Draft(a.ms))
 
 	hosts := a.app.Group("/hosts")
 	hosts.POST("/", handlers.AddHost(a.hs))
