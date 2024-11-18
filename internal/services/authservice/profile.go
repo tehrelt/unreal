@@ -26,7 +26,7 @@ func (s *Service) Profile(ctx context.Context, email string) (*entity.User, erro
 	}
 
 	if user.ProfilePicture != nil {
-		link := services.GetPictureLink(s.cfg.Host(), *user.ProfilePicture)
+		link := services.GetPictureLink(*user.ProfilePicture)
 		out.Picture = &link
 	}
 

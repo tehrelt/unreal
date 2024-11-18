@@ -2,6 +2,6 @@ package services
 
 import "fmt"
 
-func GetPictureLink(host, filename string) string {
-	return fmt.Sprintf("%s/file/%s", host, filename)
+func GetPictureLink(filename string) string {
+	return fmt.Sprintf("/file/%s", filename)
 }

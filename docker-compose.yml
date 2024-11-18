@@ -1,4 +1,23 @@
 services:
+  user-service:
+    container_name: unreal-api
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      WAIT_HOSTS: pg:5432, redis:6379
+      PG_HOST: pg
+      PG_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ENV: prod
+    depends_on:
+      - pg
+      - redis
+    ports:
+      - "${PORT}:${PORT}"
+
   redis:
     image: redis:7.2.4-alpine
     restart: unless-stopped

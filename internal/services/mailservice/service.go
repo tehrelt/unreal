@@ -17,6 +17,7 @@ type Repository interface {
 	Mailboxes(ctx context.Context) ([]*entity.Mailbox, error)
 	Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error)
 	Message(ctx context.Context, mailbox string, mailnum uint32) (*models.Message, error)
+	Raw(ctx context.Context, mailbox string, mailnum uint32) (io.Reader, error)
 	Delete(ctx context.Context, mailbox string, mailnum uint32) error
 	Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (out *models.Attachment, err error)
 	IsMessageEncrypted(ctx context.Context, mailbox string, num uint32) (vaultId string, err error)

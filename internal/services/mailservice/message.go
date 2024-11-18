@@ -35,7 +35,7 @@ func (s *Service) fillAddressInfo(ctx context.Context, r entity.AddressInfo) (ou
 	}
 
 	if pic != "" {
-		r.Picture = services.GetPictureLink(s.cfg.Host(), pic)
+		r.Picture = services.GetPictureLink(pic)
 	}
 
 	u, err := s.userProvider.Find(ctx, r.Address)
@@ -51,7 +51,7 @@ func (s *Service) fillAddressInfo(ctx context.Context, r entity.AddressInfo) (ou
 		}
 
 		if u.ProfilePicture != nil {
-			r.Picture = services.GetPictureLink(s.cfg.Host(), *u.ProfilePicture)
+			r.Picture = services.GetPictureLink(*u.ProfilePicture)
 		}
 	}
 

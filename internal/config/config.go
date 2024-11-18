@@ -35,6 +35,10 @@ type Config struct {
 	Hostname string `env:"HOST" env-default:"localhost"`
 	Port     int    `env:"PORT" env-required:"true" env-default:"4200"`
 
+	CORS struct {
+		AllowOrigins string `env:"CORS_ALLOW_ORIGINS"`
+	}
+
 	App struct {
 		Name    string `env:"APP_NAME" env-required:"true" env-default:"unreal"`
 		Version string `env:"APP_VERSION" env-required:"true" env-default:"0.0.1"`

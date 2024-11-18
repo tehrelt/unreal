@@ -2,10 +2,13 @@ package app
 
 import (
 	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	emw "github.com/labstack/echo/v4/middleware"
+	"github.com/samber/lo"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/handlers"
 	"github.com/tehrelt/unreal/internal/lib/httpvalidator"
@@ -38,11 +41,17 @@ func (a *App) initRoutes() {
 
 	a.app.Validator = httpvalidator.New(validator.New())
 
+	origins := lo.Map(strings.Split(a.config.CORS.AllowOrigins, ","), func(s string, _ int) string {
+		return strings.TrimSpace(s)
+	})
+
+	slog.Info("CORS origins", slog.Any("origins", origins))
+
 	a.app.Use(emw.Logger())
 	a.app.Use(emw.CORSWithConfig(emw.CORSConfig{
-		AllowOrigins:     []string{"http://localhost:3000", "http://unreal:3000", "http://10.244.0.13:3000", "http://dev.unreal"},
-		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
 		AllowCredentials: true,
+		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
+		AllowOrigins:     origins,
 	}))
 
 	reqauth := mw.RequireAuth(a.as, a.config)
@@ -57,6 +66,7 @@ func (a *App) initRoutes() {
 	mailbox := a.app.Group("/:mailbox", reqauth)
 	mailbox.GET("", handlers.Messages(a.ms))
 	mailbox.GET("/:mailnum", handlers.Message(a.ms))
+	mailbox.GET("/:mailnum/raw", handlers.Raw(a.ms))
 	mailbox.DELETE("/:mailnum", handlers.Delete(a.ms))
 
 	a.app.GET("/attachment/:filename", handlers.Attachment(a.ms), reqauth)
