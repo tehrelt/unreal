@@ -17,10 +17,11 @@ import (
 )
 
 type encrypted struct {
-	r   io.Reader
-	l   int64
-	k   string
-	sum string
+	data []byte
+	r    io.Reader
+	l    int64
+	k    string
+	sum  string
 }
 type decrypted struct {
 	r io.Reader
@@ -30,7 +31,6 @@ type decrypted struct {
 func (s *Service) encryptBody(ctx context.Context, mid string, body io.Reader) (*encrypted, error) {
 
 	fn := "mailservice.encryptBody"
-	// log := s.l.With(sl.Method(fn))
 
 	enc, err := s.encrypt(body)
 	if err != nil {
@@ -89,10 +89,11 @@ func (s *Service) encrypt(body io.Reader) (*encrypted, error) {
 	}
 
 	out := &encrypted{
-		r:   io.NopCloser(bytes.NewReader(encdata)),
-		l:   int64(len(encdata)),
-		k:   base64.StdEncoding.EncodeToString(ekey),
-		sum: base64.StdEncoding.EncodeToString(hashsum[:]),
+		data: encdata,
+		r:    io.NopCloser(bytes.NewReader(encdata)),
+		l:    int64(len(encdata)),
+		k:    base64.StdEncoding.EncodeToString(ekey),
+		sum:  base64.StdEncoding.EncodeToString(hashsum[:]),
 	}
 
 	return out, nil

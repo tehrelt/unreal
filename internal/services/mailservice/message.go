@@ -1,7 +1,9 @@
 package mailservice
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -88,7 +90,29 @@ func (s *Service) Message(ctx context.Context, mailbox string, num uint32) (*ent
 				})
 			}
 
-			dec, err := s.decryptBody(ctx, msg.VaultId, msg.Body)
+			body, err := io.ReadAll(msg.Body)
+			if err != nil {
+				return fmt.Errorf("%s: %w", fn, err)
+			}
+
+			if msg.Sign != "" {
+				signature, err := base64.StdEncoding.DecodeString(msg.Sign)
+				if err != nil {
+					log.Error("failed to decode signature")
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+
+				if err := s.signer.Verify(body, signature); err != nil {
+					log.Error("failed to verify signature")
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+
+				log.Info("successfully verified signature")
+			} else {
+				log.Warn("no signature on ciphered message")
+			}
+
+			dec, err := s.decryptBody(ctx, msg.VaultId, bytes.NewBuffer(body))
 			if err != nil {
 				return fmt.Errorf("%s: %w", fn, err)
 			}

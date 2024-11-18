@@ -18,10 +18,12 @@ type Repository interface {
 	Messages(ctx context.Context, in *dto.FetchMessagesDto) (*dto.FetchedMessagesDto, error)
 	Message(ctx context.Context, mailbox string, mailnum uint32) (*models.Message, error)
 	Delete(ctx context.Context, mailbox string, mailnum uint32) error
-	SaveMessageToFolderByAttribute(ctx context.Context, attr string, msg io.Reader) error
 	Attachment(ctx context.Context, mailbox string, mailnum uint32, target string) (out *models.Attachment, err error)
 	IsMessageEncrypted(ctx context.Context, mailbox string, num uint32) (vaultId string, err error)
 	Health(ctx context.Context) (bool, error)
+
+	SaveSentMessage(ctx context.Context, msg io.Reader) error
+	SaveDraftMessage(ctx context.Context, msg io.Reader) error
 }
 
 type Sender interface {
@@ -45,6 +47,11 @@ type Vault interface {
 	AppendFiles(ctx context.Context, in *models.AppendFilesArgs) error
 }
 
+type Signer interface {
+	Sign(data []byte) []byte
+	Verify(data, signature []byte) error
+}
+
 type KeyCipher interface {
 	Encrypt(io.Reader) (io.Reader, error)
 	Decrypt(io.Reader) (io.Reader, error)
@@ -60,6 +67,7 @@ type Service struct {
 	hostProvider KnownHostProvider
 	vault        Vault
 	keyCipher    KeyCipher
+	signer       Signer
 }
 
 func New(
@@ -71,16 +79,18 @@ func New(
 	hostProvider KnownHostProvider,
 	vault Vault,
 	cipher KeyCipher,
+	signer Signer,
 ) *Service {
 	return &Service{
 		cfg:          cfg,
 		m:            manager,
 		r:            r,
-		l:            slog.With(sl.Method("mailservice.MailService")),
 		sender:       sender,
 		userProvider: userProvider,
 		hostProvider: hostProvider,
 		vault:        vault,
 		keyCipher:    cipher,
+		signer:       signer,
+		l:            slog.With(sl.Method("mailservice.MailService")),
 	}
 }

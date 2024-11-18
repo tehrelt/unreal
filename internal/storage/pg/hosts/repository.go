@@ -50,14 +50,14 @@ func (r *Repository) Find(ctx context.Context, host string) (string, error) {
 	}
 	defer connection.Release()
 
-	qlog := log.With(slog.String("query", sql), slog.Any("args", args))
+	// qlog := log.With(slog.String("query", sql), slog.Any("args", args))
 
-	qlog.Debug("querying user")
+	// qlog.Debug("querying user")
 
 	var picture string
 	if err := connection.QueryRow(ctx, sql, args...).Scan(&picture); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			log.Debug("host not found", slog.String("host", host))
+			// log.Debug("host not found", slog.String("host", host))
 			return "", fmt.Errorf("%s: %w", fn, storage.ErrHostNotFound)
 		}
 		var pgerr *pgconn.PgError

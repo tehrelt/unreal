@@ -5,12 +5,14 @@ package app
 
 import (
 	"context"
+	dsa "crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/google/wire"
@@ -18,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/tehrelt/unreal/internal/config"
 	"github.com/tehrelt/unreal/internal/lib/aes"
+	dsasigner "github.com/tehrelt/unreal/internal/lib/dsa"
 	rsacipher "github.com/tehrelt/unreal/internal/lib/rsa"
 	"github.com/tehrelt/unreal/internal/services/authservice"
 	"github.com/tehrelt/unreal/internal/services/hostservice"
@@ -66,6 +69,12 @@ func New() (*App, func(), error) {
 			aes.NewStringCipher,
 		),
 
+		wire.NewSet(
+			_dsaPrivateKey,
+			_dsaPublicKey,
+			dsasigner.New,
+		),
+
 		wire.Bind(new(authservice.UserProvider), new(*usersrepository.Repository)),
 		wire.Bind(new(authservice.UserSaver), new(*usersrepository.Repository)),
 		wire.Bind(new(authservice.UserUpdater), new(*usersrepository.Repository)),
@@ -80,6 +89,7 @@ func New() (*App, func(), error) {
 		wire.Bind(new(mailservice.KnownHostProvider), new(*hosts.Repository)),
 		wire.Bind(new(mailservice.Vault), new(*vault.Repository)),
 		wire.Bind(new(mailservice.KeyCipher), new(*rsacipher.Cipher)),
+		wire.Bind(new(mailservice.Signer), new(*dsasigner.Signer)),
 
 		wire.Bind(new(hostservice.FileUploader), new(*fs.FileStorage)),
 		wire.Bind(new(hostservice.HostSaver), new(*hosts.Repository)),
@@ -177,4 +187,53 @@ func _rsaPublicKey(cfg *config.Config) (*rsa.PublicKey, error) {
 	}
 
 	return rsaPubKey, nil
+}
+
+func _dsaPrivateKey(cfg *config.Config) (dsa.PrivateKey, error) {
+
+	data, err := os.ReadFile(cfg.DSA.PrivateKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "PRIVATE KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing private key: block.Type = %s", block.Type)
+	}
+
+	privKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse: %w", err)
+	}
+
+	pkey, ok := privKey.(dsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("not a DSA private key")
+	}
+
+	return pkey, nil
+}
+
+func _dsaPublicKey(cfg *config.Config) (dsa.PublicKey, error) {
+	data, err := os.ReadFile(cfg.DSA.PublicKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, errors.New("failed to decode PEM block containing public key")
+	}
+
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	pub, ok := pubKey.(dsa.PublicKey)
+	if !ok {
+		return nil, errors.New("not an DSA public key")
+	}
+
+	return pub, nil
 }

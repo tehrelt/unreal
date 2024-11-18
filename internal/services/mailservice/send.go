@@ -3,6 +3,7 @@ package mailservice
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -123,8 +124,11 @@ func (s *Service) buildMessage(ctx context.Context, req *dto.SendMessageDto) (*m
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", fn, err)
 		}
-		in.Attachments = append(in.Attachments, body)
 
+		sign := s.signer.Sign(enc.data)
+
+		in.Sign = base64.StdEncoding.EncodeToString(sign)
+		in.Attachments = append(in.Attachments, body)
 		in.Body = new(bytes.Buffer)
 		in.EncryptKey = messageId
 	}
@@ -150,7 +154,7 @@ func (s *Service) Send(ctx context.Context, req *dto.SendMessageDto) error {
 			return fmt.Errorf("%s: %w", fn, err)
 		}
 
-		if err := s.r.SaveMessageToFolderByAttribute(ctx, "\\Sent", msg); err != nil {
+		if err := s.r.SaveSentMessage(ctx, msg); err != nil {
 			return fmt.Errorf("%s: %w", fn, err)
 		}
 

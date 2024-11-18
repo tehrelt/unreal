@@ -55,6 +55,11 @@ type Config struct {
 		TtlString string `env:"JWT_TTL" env-required:"true" env-default:"10m"`
 	}
 
+	DSA struct {
+		PrivateKeyFile string `env:"DSA_PRIVATE_KEY_FILE" env-required:"true" env-default:"./cert/id_dsa"`
+		PublicKeyFile  string `env:"DSA_PUBLIC_KEY_FILE" env-required:"true" env-default:"./cert/id_dsa.pub"`
+	}
+
 	Pg Pg
 
 	Fs FS

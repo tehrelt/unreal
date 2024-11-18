@@ -26,7 +26,7 @@ func (s *Service) Draft(ctx context.Context, req *dto.SendMessageDto) error {
 			return fmt.Errorf("%s: %w", fn, err)
 		}
 
-		if err := s.r.SaveMessageToFolderByAttribute(ctx, "\\Draft", msg); err != nil {
+		if err := s.r.SaveDraftMessage(ctx, msg); err != nil {
 			return fmt.Errorf("%s: %w", fn, err)
 		}
 

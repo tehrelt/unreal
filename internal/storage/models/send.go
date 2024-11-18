@@ -18,6 +18,7 @@ type Message struct {
 	Body        io.Reader
 	Attachments []entity.Attachment
 	VaultId     string
+	Sign        string
 	SentDate    time.Time
 	IsRead      bool
 }
@@ -29,4 +30,5 @@ type SendMessage struct {
 	Body        io.Reader
 	Attachments []*multipart.FileHeader
 	EncryptKey  string
+	Sign        string
 }

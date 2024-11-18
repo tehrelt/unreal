@@ -40,9 +40,9 @@ func (r *Repository) Find(ctx context.Context, email string) (*models.User, erro
 	}
 	defer connection.Release()
 
-	qlog := log.With(slog.String("query", sql), slog.Any("args", args))
+	// qlog := log.With(slog.String("query", sql), slog.Any("args", args))
 
-	qlog.Debug("querying user")
+	// qlog.Debug("querying user")
 
 	var u models.User
 	if err := connection.QueryRow(ctx, sql, args...).Scan(&u.Email, &u.Name, &u.CreatedAt, &u.UpdatedAt, &u.ProfilePicture); err != nil {

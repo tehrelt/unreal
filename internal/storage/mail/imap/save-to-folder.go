@@ -33,11 +33,23 @@ func (r *Repository) saveMessageToFolder(ctx context.Context, folder string, msg
 	return nil
 }
 
-func (r *Repository) SaveMessageToFolderByAttribute(ctx context.Context, attribute string, msg io.Reader) error {
+func (r *Repository) SaveSentMessage(ctx context.Context, msg io.Reader) error {
 
-	fn := "imap.SaveMessageToFolderByAttribute"
+	fn := "imap.SaveSentMessage"
 
-	folder, err := r.findFolderByAttr(ctx, attrSent)
+	folder, err := r.findFolderByAttr(ctx, "\\Sent")
+	if err != nil {
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return r.saveMessageToFolder(ctx, folder, msg.(imap.Literal))
+}
+
+func (r *Repository) SaveDraftMessage(ctx context.Context, msg io.Reader) error {
+
+	fn := "imap.SaveDraft"
+
+	folder, err := r.findFolderByAttr(ctx, "\\Drafts")
 	if err != nil {
 		return fmt.Errorf("%s: %w", fn, err)
 	}

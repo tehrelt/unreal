@@ -61,7 +61,7 @@ func (a *App) initRoutes() {
 
 	a.app.GET("/attachment/:filename", handlers.Attachment(a.ms), reqauth)
 	a.app.POST("/send", handlers.SendMail(a.ms), reqauth)
-	a.app.POST("/draft", handlers.Draft(a.ms))
+	a.app.POST("/draft", handlers.Draft(a.ms), reqauth)
 
 	hosts := a.app.Group("/hosts")
 	hosts.POST("/", handlers.AddHost(a.hs))

@@ -49,6 +49,9 @@ func (r *Repository) Send(ctx context.Context, in *models.SendMessage) (io.Reade
 	if in.EncryptKey != "" {
 		m.SetHeader(storage.EncryptionHeader, in.EncryptKey)
 	}
+	if in.Sign != "" {
+		m.SetHeader(storage.SignatureHeader, in.Sign)
+	}
 
 	if _, err := io.Copy(builder, in.Body); err != nil {
 		log.Error("cannot copy body to buffer", sl.Err(err), slog.Any("body", in.Body))

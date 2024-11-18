@@ -93,6 +93,7 @@ func (r *Repository) Message(ctx context.Context, mailbox string, num uint32) (*
 		}
 
 		msg.VaultId = mr.Header.Get(storage.EncryptionHeader)
+		msg.Sign = mr.Header.Get(storage.SignatureHeader)
 
 		for {
 			part, err := mr.NextPart()
